@@ -45,8 +45,23 @@ logs/
 frontend/node_modules/
 frontend/dist/
 frontend/.capacitor/
-frontend/android/
-frontend/ios/
+
+# Frontend env (commit only .env.example)
+frontend/.env
+frontend/.env.local
+frontend/.env.production
+frontend/.env.development
+
+# Capacitor native platforms — track source, ignore build output
+frontend/android/app/build/
+frontend/android/build/
+frontend/android/.gradle/
+frontend/android/local.properties
+frontend/android/captures/
+frontend/android/app/release/
+frontend/ios/App/build/
+frontend/ios/App/Pods/
+frontend/ios/DerivedData/
 
 # Android build artifacts
 *.apk

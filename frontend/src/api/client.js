@@ -47,7 +47,7 @@ async function request(path, options = {}) {
       res = await fetch(`${API_BASE}${path}`, { ...options, headers, _retried: true });
     } else {
       clearTokens();
-      window.location.href = '/login';
+      window.dispatchEvent(new CustomEvent('fg:session-expired'));
       throw new Error('Session expired');
     }
   }

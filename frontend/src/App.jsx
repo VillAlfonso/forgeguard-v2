@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route, Navigate, Link, useNavigate, useLocation 
 import { api } from './api/client';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
 import Scan from './pages/Scan';
 import History from './pages/History';
 import Account from './pages/Account';
@@ -18,6 +17,7 @@ export function useAuth() {
 }
 
 function AuthProvider({ children }) {
+  const navigate = useNavigate();
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('fg_user');
     return saved ? JSON.parse(saved) : null;
@@ -34,6 +34,16 @@ function AuthProvider({ children }) {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    function onSessionExpired() {
+      setUser(null);
+      localStorage.removeItem('fg_user');
+      navigate('/login', { replace: true });
+    }
+    window.addEventListener('fg:session-expired', onSessionExpired);
+    return () => window.removeEventListener('fg:session-expired', onSessionExpired);
+  }, [navigate]);
 
   function loginUser(data) {
     api.saveTokens(data.access_token, data.refresh_token);
@@ -72,7 +82,7 @@ function AdminRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#a3a3a3' }}>Loading...</div>;
   if (!user) return <Navigate to="/login" replace />;
-  if (!user.is_admin) return <Navigate to="/" replace />;
+  if (!user.is_admin) return <Navigate to="/scan" replace />;
   return children;
 }
 
@@ -81,13 +91,28 @@ function AdminRoute({ children }) {
 function Layout({ children }) {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => { setMenuOpen(false); }, [location.pathname]);
 
   const navItems = [
     { path: '/scan', label: 'Scan' },
     { path: '/history', label: 'History' },
     { path: '/account', label: 'Account' },
-    ...(user?.is_admin ? [{ path: '/admin', label: 'Admin Panel' }] : []),
+    ...(user?.is_admin ? [{ path: '/admin', label: 'Admin' }] : []),
   ];
+
+  const linkStyle = (active) => ({
+    padding: '10px 14px',
+    fontSize: 13,
+    fontFamily: "'Oswald', sans-serif",
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    color: active ? '#f5c518' : '#a3a3a3',
+    textDecoration: 'none',
+    borderBottom: active ? '2px solid #f5c518' : '2px solid transparent',
+    whiteSpace: 'nowrap',
+  });
 
   return (
     <div>
@@ -96,47 +121,78 @@ function Layout({ children }) {
         background: 'linear-gradient(180deg, #111 0%, #0a0a0a 100%)',
         borderBottom: '1px solid #262626',
         padding: '12px 16px',
+        position: 'sticky', top: 0, zIndex: 50,
       }}>
         <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span className="oswald" style={{ fontSize: 22, fontWeight: 700, color: '#f5c518', letterSpacing: 3 }}>
+          <Link to="/scan" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span className="oswald" style={{ fontSize: 20, fontWeight: 700, color: '#f5c518', letterSpacing: 3 }}>
               FORGEGUARD
             </span>
           </Link>
+
           {user && (
-            <nav style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-              {navItems.map(item => (
-                <Link
-                  key={item.path}
-                  to={item.path}
+            <>
+              <nav className="nav-desktop" style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                {navItems.map(item => (
+                  <Link key={item.path} to={item.path} style={linkStyle(location.pathname === item.path)}>
+                    {item.label}
+                  </Link>
+                ))}
+                <button
+                  onClick={logout}
                   style={{
-                    padding: '6px 14px',
-                    fontSize: 13,
-                    fontFamily: "'Oswald', sans-serif",
-                    textTransform: 'uppercase',
-                    letterSpacing: 1.5,
-                    color: location.pathname === item.path ? '#f5c518' : '#a3a3a3',
-                    textDecoration: 'none',
-                    borderBottom: location.pathname === item.path ? '2px solid #f5c518' : '2px solid transparent',
+                    background: 'none', border: '1px solid #404040', color: '#a3a3a3',
+                    padding: '6px 14px', cursor: 'pointer', fontSize: 12,
+                    fontFamily: "'Oswald', sans-serif", textTransform: 'uppercase',
+                    letterSpacing: 1, borderRadius: 4, marginLeft: 8,
                   }}
                 >
-                  {item.label}
-                </Link>
-              ))}
+                  Logout
+                </button>
+              </nav>
+
               <button
-                onClick={logout}
+                className="nav-burger"
+                onClick={() => setMenuOpen(v => !v)}
+                aria-label="Toggle menu"
                 style={{
-                  background: 'none', border: '1px solid #404040', color: '#a3a3a3',
-                  padding: '6px 14px', cursor: 'pointer', fontSize: 12,
-                  fontFamily: "'Oswald', sans-serif", textTransform: 'uppercase',
-                  letterSpacing: 1, borderRadius: 4, marginLeft: 8,
+                  background: 'none', border: '1px solid #404040', color: '#f5c518',
+                  padding: '8px 12px', cursor: 'pointer', borderRadius: 4,
+                  fontSize: 18, lineHeight: 1,
                 }}
               >
-                Logout
+                {menuOpen ? '✕' : '☰'}
               </button>
-            </nav>
+            </>
           )}
         </div>
+
+        {user && menuOpen && (
+          <div
+            className="nav-mobile-panel"
+            style={{
+              borderTop: '1px solid #262626', marginTop: 12, paddingTop: 8,
+              display: 'flex', flexDirection: 'column',
+            }}
+          >
+            {navItems.map(item => (
+              <Link key={item.path} to={item.path} style={{ ...linkStyle(location.pathname === item.path), borderBottom: 'none', padding: '12px 16px' }}>
+                {item.label}
+              </Link>
+            ))}
+            <button
+              onClick={() => { setMenuOpen(false); logout(); }}
+              style={{
+                background: 'none', border: 'none', color: '#a3a3a3',
+                padding: '12px 16px', textAlign: 'left', cursor: 'pointer',
+                fontFamily: "'Oswald', sans-serif", textTransform: 'uppercase',
+                letterSpacing: 1.5, fontSize: 13,
+              }}
+            >
+              Logout
+            </button>
+          </div>
+        )}
       </header>
       <main style={{ padding: '24px 0', minHeight: 'calc(100vh - 80px)' }}>
         <div className="container">
@@ -157,12 +213,12 @@ export default function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/" element={<Navigate to="/scan" replace />} />
             <Route path="/scan" element={<ProtectedRoute><Scan /></ProtectedRoute>} />
             <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
             <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
             <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/scan" replace />} />
           </Routes>
         </Layout>
       </AuthProvider>
