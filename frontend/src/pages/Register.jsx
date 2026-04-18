@@ -10,7 +10,7 @@ export default function Register() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  if (user) { navigate('/', { replace: true }); return null; }
+  if (user) { navigate('/scan', { replace: true }); return null; }
 
   function update(field) {
     return e => setForm(f => ({ ...f, [field]: e.target.value }));
@@ -23,7 +23,7 @@ export default function Register() {
     try {
       const data = await api.register(form.email, form.username, form.password, form.full_name);
       loginUser(data);
-      navigate('/');
+      navigate('/scan');
     } catch (err) {
       setError(err.message);
     } finally {

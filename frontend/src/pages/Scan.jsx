@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { api } from '../api/client';
 
 // Top-level forgery groups. `backendCategory` matches the "category" field
@@ -69,6 +70,46 @@ export default function Scan() {
     const reader = new FileReader();
     reader.onload = ev => setPreview(ev.target.result);
     reader.readAsDataURL(f);
+  }
+
+  async function handleTakePhoto() {
+    setError('');
+    setResult(null);
+    try {
+      const photo = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.Uri,
+        source: CameraSource.Camera,
+      });
+      const res = await fetch(photo.webPath);
+      const blob = await res.blob();
+      const f = new File([blob], `scan-${Date.now()}.${photo.format || 'jpg'}`, { type: blob.type });
+      setFile(f);
+      setPreview(photo.webPath);
+    } catch (err) {
+      if (err?.message && !/cancel/i.test(err.message)) setError(err.message);
+    }
+  }
+
+  async function handlePickFromGallery() {
+    setError('');
+    setResult(null);
+    try {
+      const photo = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.Uri,
+        source: CameraSource.Photos,
+      });
+      const res = await fetch(photo.webPath);
+      const blob = await res.blob();
+      const f = new File([blob], `photo-${Date.now()}.${photo.format || 'jpg'}`, { type: blob.type });
+      setFile(f);
+      setPreview(photo.webPath);
+    } catch (err) {
+      if (err?.message && !/cancel/i.test(err.message)) setError(err.message);
+    }
   }
 
   function drawAnnotations(annotations, imgW, imgH) {
@@ -171,25 +212,36 @@ export default function Scan() {
 
         <div className="card">
           <h3 className="oswald" style={{ fontSize: 14, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 16, color: '#a3a3a3' }}>
-            Upload Document
+            Capture Document
           </h3>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: 16 }}>
+            <button type="button" className="btn btn-primary" onClick={handleTakePhoto} style={{ padding: '14px 16px' }}>
+              📷 Take Photo
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={handlePickFromGallery} style={{ padding: '14px 16px' }}>
+              🖼️ Gallery
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={() => fileRef.current.click()} style={{ padding: '14px 16px' }}>
+              📁 File
+            </button>
+          </div>
+          <input ref={fileRef} type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
+
           <div
             onClick={() => fileRef.current.click()}
             style={{
-              border: '2px dashed #404040', borderRadius: 8, padding: 40, textAlign: 'center',
+              border: '2px dashed #404040', borderRadius: 8, padding: preview ? 16 : 40, textAlign: 'center',
               cursor: 'pointer', transition: 'border-color 0.2s',
             }}
-            onMouseEnter={e => e.currentTarget.style.borderColor = '#f5c518'}
-            onMouseLeave={e => e.currentTarget.style.borderColor = '#404040'}
           >
-            <input ref={fileRef} type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
             {preview ? (
               <img src={preview} alt="Preview" style={{ maxWidth: '100%', maxHeight: 300, borderRadius: 4 }} />
             ) : (
               <div>
                 <div style={{ fontSize: 36, marginBottom: 8 }}>+</div>
-                <p style={{ color: '#a3a3a3' }}>Tap to select an image</p>
-                <p style={{ color: '#525252', fontSize: 13, marginTop: 4 }}>JPG, PNG supported</p>
+                <p style={{ color: '#a3a3a3' }}>No image selected</p>
+                <p style={{ color: '#525252', fontSize: 13, marginTop: 4 }}>Use a button above to capture or choose</p>
               </div>
             )}
           </div>
