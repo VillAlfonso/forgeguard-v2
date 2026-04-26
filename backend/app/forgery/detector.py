@@ -42,7 +42,7 @@ TRAINING_STATUS = {
     "addition_interlineation": False,
     "erasure_chemical": False,
     "erasure_mechanical": False,
-    "digital_cut_paste": True,
+    "digital_cut_paste": False,
     "digital_desktop": False,
     "digital_scanned": False,
     "obliteration_ink": False,
