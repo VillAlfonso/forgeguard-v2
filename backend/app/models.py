@@ -1,5 +1,5 @@
 """
-Database models for ForgeGuard SaaS.
+Database models for Revelator SaaS.
 """
 
 import uuid

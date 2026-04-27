@@ -33,7 +33,7 @@ export default function About() {
           ◆ HOW IT WORKS · LIMITATIONS · DATASET ◆
         </p>
         <h1 className="oswald" style={{ fontSize: 28, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>
-          About ForgeGuard
+          About Revelator
         </h1>
         <p style={{ color: '#a3a3a3', maxWidth: 700, lineHeight: 1.6, fontSize: 14 }}>
           A transparent look at what the system does, what it doesn't, and exactly how much
@@ -151,7 +151,7 @@ export default function About() {
           Disclaimer
         </h4>
         <p style={{ fontSize: 13, color: '#d4d4d4', lineHeight: 1.6, margin: 0 }}>
-          ForgeGuard is a screening and triage tool intended to support — not replace — qualified
+          Revelator is a screening and triage tool intended to support — not replace — qualified
           document examination. Findings here are not by themselves admissible as forensic evidence.
           For legal proceedings, consult a certified document examiner.
         </p>

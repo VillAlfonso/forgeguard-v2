@@ -1,4 +1,4 @@
-# Building ForgeGuard Android APK
+# Building Revelator Android APK
 
 ## Prerequisites
 
@@ -69,7 +69,7 @@ Or just transfer the `.apk` file to your phone and install it.
 
 ## Connecting to Your Backend
 
-The Android app needs to reach your ForgeGuard API server:
+The Android app needs to reach your Revelator API server:
 
 ### During Development (local network)
 Edit `frontend/src/api/client.js` and change `API_BASE`:

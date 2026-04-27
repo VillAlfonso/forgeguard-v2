@@ -14,7 +14,7 @@ from .models import User
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Promote or demote a ForgeGuard user.")
+    parser = argparse.ArgumentParser(description="Promote or demote a Revelator user.")
     parser.add_argument("email", help="Email of the user to modify")
     parser.add_argument("--revoke", action="store_true", help="Revoke admin role instead of granting it")
     args = parser.parse_args()

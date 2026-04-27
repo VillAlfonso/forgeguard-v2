@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.forgeguard.app',
-  appName: 'ForgeGuard',
+  appName: 'Revelator',
   webDir: 'dist',
   server: {
     // For development: point to your backend API

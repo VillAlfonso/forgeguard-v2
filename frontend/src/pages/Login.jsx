@@ -32,7 +32,7 @@ export default function Login() {
     <div style={{ maxWidth: 420, margin: '60px auto' }}>
       <div style={{ textAlign: 'center', marginBottom: 32 }}>
         <h1 className="oswald" style={{ fontSize: 28, color: '#f5c518', letterSpacing: 4 }}>
-          FORGEGUARD
+          REVELATOR
         </h1>
         <p style={{ color: '#a3a3a3', marginTop: 8, fontSize: 14 }}>Document Forensics Unit</p>
       </div>

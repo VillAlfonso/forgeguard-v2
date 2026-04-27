@@ -1,6 +1,6 @@
 """
-ForgeGuard SaaS API
-===================
+Revelator SaaS API
+==================
 Full-stack document forgery detection with auth, payments, and scan history.
 """
 

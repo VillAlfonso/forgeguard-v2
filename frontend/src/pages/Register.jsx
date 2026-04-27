@@ -36,7 +36,7 @@ export default function Register() {
   return (
     <div style={{ maxWidth: 420, margin: '40px auto' }}>
       <div style={{ textAlign: 'center', marginBottom: 32 }}>
-        <h1 className="oswald" style={{ fontSize: 28, color: '#f5c518', letterSpacing: 4 }}>FORGEGUARD</h1>
+        <h1 className="oswald" style={{ fontSize: 28, color: '#f5c518', letterSpacing: 4 }}>REVELATOR</h1>
         <p style={{ color: '#a3a3a3', marginTop: 8, fontSize: 14 }}>Create your account</p>
       </div>
 

@@ -1,5 +1,5 @@
 /**
- * API client for ForgeGuard backend.
+ * API client for Revelator backend.
  * Handles auth tokens automatically.
  */
 

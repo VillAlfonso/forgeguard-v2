@@ -1,4 +1,4 @@
-# ForgeGuard v2.0 - Document Forensics System
+# Revelator v2.0 - Document Forensics System
 
 AI-powered document forgery detection system with 16 detection classes.
 
@@ -256,4 +256,4 @@ For capstone project use. Check with your institution for commercial licensing.
 
 ## 🤝 Support
 
-Built for LSPU Capstone Project - ForgeGuard Document Forensics System
+Built for LSPU Capstone Project - Revelator Document Forensics System

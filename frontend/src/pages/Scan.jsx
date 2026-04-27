@@ -5,13 +5,16 @@ import { api } from '../api/client';
 
 // Top-level forgery groups. `backendCategory` matches the "category" field
 // returned by GET /api/categories, used to filter the leaf method list.
+// `equipment` controls how the group is bucketed on the selection screen:
+//   'phone'   → analyzable from a normal phone photo
+//   'special' → requires UV/IR lighting, microscope, or backlit watermark inspection
 const GROUPS = [
-  { id: 'traced',          code: 'TRC', icon: '📋', color: '#3b82f6', title: 'Traced Forgery',  description: 'Documents with traced signatures or content',  methods: 3, backendCategory: 'Traced' },
-  { id: 'alteration',      code: 'ALT', icon: '✏️', color: '#dc2626', title: 'Alteration',       description: 'Modified or changed document content',         methods: 4, backendCategory: 'Alteration' },
-  { id: 'digital',         code: 'DIG', icon: '💻', color: '#8b5cf6', title: 'Digital Forgery',  description: 'Computer-generated or manipulated documents',  methods: 3, backendCategory: 'Digital' },
-  { id: 'obliteration',    code: 'OBL', icon: '◼',  color: '#f97316', title: 'Obliteration',     description: 'Concealed or covered content',                 methods: 3, backendCategory: 'Obliteration' },
-  { id: 'sympathetic_ink', code: 'SYM', icon: '🔬', color: '#22c55e', title: 'Sympathetic Ink',  description: 'Invisible or special ink analysis',            methods: 2, backendCategory: 'Sympathetic Ink' },
-  { id: 'currency',        code: 'CUR', icon: '💵', color: '#eab308', title: 'Currency Forgery', description: 'Counterfeit money detection',                  methods: 1, backendCategory: 'Currency' },
+  { id: 'digital',         code: 'DIG', icon: '💻', color: '#8b5cf6', title: 'Digital Forgery',  description: 'Computer-generated or manipulated documents',  methods: 3, backendCategory: 'Digital',         equipment: 'phone' },
+  { id: 'alteration',      code: 'ALT', icon: '✏️', color: '#dc2626', title: 'Alteration',       description: 'Modified or changed document content',         methods: 4, backendCategory: 'Alteration',      equipment: 'phone' },
+  { id: 'traced',          code: 'TRC', icon: '📋', color: '#3b82f6', title: 'Traced Forgery',   description: 'Documents with traced signatures or content',  methods: 3, backendCategory: 'Traced',          equipment: 'phone' },
+  { id: 'obliteration',    code: 'OBL', icon: '◼',  color: '#f97316', title: 'Obliteration',     description: 'Concealed or covered content',                 methods: 3, backendCategory: 'Obliteration',    equipment: 'phone' },
+  { id: 'sympathetic_ink', code: 'SYM', icon: '🔬', color: '#22c55e', title: 'Sympathetic Ink',  description: 'Invisible or special ink — UV/IR required',    methods: 2, backendCategory: 'Sympathetic Ink', equipment: 'special' },
+  { id: 'currency',        code: 'CUR', icon: '💵', color: '#eab308', title: 'Currency Forgery', description: 'Counterfeit money — security feature inspection', methods: 1, backendCategory: 'Currency',     equipment: 'special' },
 ];
 
 export default function Scan() {
@@ -366,19 +369,27 @@ function SelectForgeryType({ onPick, onAutoDetect, datasetTotals = {} }) {
         </p>
       </div>
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-        gap: 16, marginBottom: 40,
-      }}>
-        {GROUPS.map((g, i) => (
-          <CategoryCard
-            key={g.id} cat={g} index={i + 1}
-            datasetCount={datasetTotals[g.backendCategory] || 0}
-            onClick={() => onPick(g)}
-          />
-        ))}
-      </div>
+      <EquipmentBucket
+        label="Phone-Scannable"
+        sublabel="Works with a normal phone photo or scanned image"
+        icon="📱"
+        accent="#22c55e"
+        groups={GROUPS.filter(g => g.equipment === 'phone')}
+        startIndex={1}
+        datasetTotals={datasetTotals}
+        onPick={onPick}
+      />
+
+      <EquipmentBucket
+        label="Specialized Equipment"
+        sublabel="Requires UV/IR lighting, magnification, or physical security feature inspection"
+        icon="🔬"
+        accent="#eab308"
+        groups={GROUPS.filter(g => g.equipment === 'special')}
+        startIndex={GROUPS.filter(g => g.equipment === 'phone').length + 1}
+        datasetTotals={datasetTotals}
+        onPick={onPick}
+      />
 
       <div style={{ textAlign: 'center', marginTop: 32 }}>
         <p className="mono" style={{ fontSize: 10, color: '#525252', letterSpacing: 2, marginBottom: 12 }}>
@@ -389,6 +400,50 @@ function SelectForgeryType({ onPick, onAutoDetect, datasetTotals = {} }) {
         </button>
       </div>
     </div>
+  );
+}
+
+function EquipmentBucket({ label, sublabel, icon, accent, groups, startIndex, datasetTotals, onPick }) {
+  return (
+    <section style={{ marginBottom: 32 }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12,
+        paddingBottom: 8, borderBottom: `1px solid ${accent}33`,
+      }}>
+        <span style={{ fontSize: 22 }}>{icon}</span>
+        <div style={{ flex: 1 }}>
+          <h3 className="oswald" style={{
+            fontSize: 16, fontWeight: 700, letterSpacing: 2, margin: 0,
+            color: accent, textTransform: 'uppercase',
+          }}>
+            {label}
+          </h3>
+          <p style={{ fontSize: 12, color: '#a3a3a3', margin: '2px 0 0', lineHeight: 1.4 }}>
+            {sublabel}
+          </p>
+        </div>
+        <span className="mono" style={{
+          fontSize: 10, color: accent, padding: '2px 8px',
+          border: `1px solid ${accent}66`, borderRadius: 3, letterSpacing: 1.5,
+        }}>
+          {groups.length} {groups.length === 1 ? 'TYPE' : 'TYPES'}
+        </span>
+      </div>
+
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+        gap: 16,
+      }}>
+        {groups.map((g, i) => (
+          <CategoryCard
+            key={g.id} cat={g} index={startIndex + i}
+            datasetCount={datasetTotals[g.backendCategory] || 0}
+            onClick={() => onPick(g)}
+          />
+        ))}
+      </div>
+    </section>
   );
 }
 

@@ -1,6 +1,6 @@
 """
-ForgeGuard Configuration
-========================
+Revelator Configuration
+=======================
 All settings loaded from environment variables.
 """
 
@@ -40,9 +40,11 @@ STRIPE_PRICE_ID_BASIC = os.getenv("STRIPE_PRICE_ID_BASIC", STRIPE_PRICE_ID_PRO)
 # ============================================
 # LLM
 # ============================================
-USE_CLOUD_LLM = os.getenv("USE_CLOUD_LLM", "false").lower() == "true"
+USE_CLOUD_LLM = os.getenv("USE_CLOUD_LLM", "true").lower() == "true"
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+# Vision-capable Groq model. Receives the annotated image + prompt for the explainer.
+GROQ_VISION_MODEL = os.getenv("GROQ_VISION_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3")
 
@@ -55,7 +57,7 @@ CONFIDENCE_THRESHOLD = float(os.getenv("CONFIDENCE_THRESHOLD", "0.25"))
 # ============================================
 # APP
 # ============================================
-APP_NAME = "ForgeGuard"
+APP_NAME = "Revelator"
 APP_VERSION = "2.0.0"
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 API_URL = os.getenv("API_URL", "http://localhost:8000")

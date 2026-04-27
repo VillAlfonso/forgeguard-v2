@@ -42,7 +42,7 @@ PLAN_LIMITS = {
 def generate_scan_id() -> str:
     ts = datetime.now().strftime("%Y%m%d")
     rnd = "".join(random.choices(string.ascii_uppercase + string.digits, k=5))
-    return f"FG-{ts}-{rnd}"
+    return f"RV-{ts}-{rnd}"
 
 
 def check_scan_limit(user: User):
@@ -140,7 +140,7 @@ def get_about_info():
             "Lighting, camera angle, focus, and resolution materially affect results. Photograph documents flat with even light.",
             "Photographed prints of digital forgeries may produce different signals than the original digital file.",
             "The detector is calibrated for document examination; out-of-domain images (memes, photos of objects) yield meaningless verdicts.",
-            "ForgeGuard is a screening tool. Findings are not, by themselves, admissible forensic evidence.",
+            "Revelator is a screening tool. Findings are not, by themselves, admissible forensic evidence.",
         ],
         "categories": by_category,
         "totals": {
@@ -181,7 +181,7 @@ def analyze_document(
     verdict, confidence = determine_verdict(detections)
     # LLM explanation is a paid feature — only generated for plans in LLM_PLANS.
     llm_explanation = (
-        get_llm_explanation(detections, category)
+        get_llm_explanation(detections, category, image=image)
         if current_user.plan in LLM_PLANS
         else None
     )

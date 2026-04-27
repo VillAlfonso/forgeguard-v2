@@ -129,7 +129,7 @@ function Layout({ children }) {
         <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Link to="/scan" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
             <span className="oswald" style={{ fontSize: 20, fontWeight: 700, color: '#f5c518', letterSpacing: 3 }}>
-              FORGEGUARD
+              REVELATOR
             </span>
           </Link>
 

@@ -1,4 +1,4 @@
-# ForgeGuard - Quick Start Training Guide
+# Revelator - Quick Start Training Guide
 
 ## 🎯 Goal: Train ONE category to test your pipeline
 
@@ -118,7 +118,7 @@ python train_digital_forgery.py test runs/train/digital_forgery/weights/best.pt 
 
 ---
 
-## 🔌 STEP 5: Deploy to ForgeGuard
+## 🔌 STEP 5: Deploy to Revelator
 
 1. Copy `best.pt` to `weights/` folder
 2. Update `.env`:

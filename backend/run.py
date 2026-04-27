@@ -1,4 +1,4 @@
-"""Run the ForgeGuard API server."""
+"""Run the Revelator API server."""
 
 import uvicorn
 
