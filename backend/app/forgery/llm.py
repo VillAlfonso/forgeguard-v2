@@ -13,36 +13,57 @@ from ..config import (
     USE_CLOUD_LLM, GROQ_API_KEY, GROQ_MODEL, GROQ_VISION_MODEL,
     OLLAMA_URL, OLLAMA_MODEL,
 )
+from .ela import compute_ela, side_by_side
 
 
 # ────────────── prompts ──────────────
 
 CUT_PASTE_VISION_PROMPT = (
     "You are a forensic document examiner specializing in detecting digital cut-and-paste "
-    "forgeries. The attached image has colored bounding boxes drawn on regions a YOLO "
-    "detector flagged as potential tampering.\n\n"
+    "forgeries. The attached panel shows TWO images side by side:\n"
+    "  • LEFT: the document with colored bounding boxes drawn on regions a detector "
+    "flagged as potential tampering.\n"
+    "  • RIGHT: the Error Level Analysis (ELA) map of the same document. ELA re-saves "
+    "the image at a known JPEG quality and amplifies the difference against the original. "
+    "BRIGHT areas in the ELA map = high recompression error, which is typical of regions "
+    "that were edited or composited after the original was first compressed. Uniform dark "
+    "areas = consistent compression history.\n\n"
     "Detected regions:\n{detection_lines}\n\n"
-    "For EACH numbered region, examine the image and report:\n"
-    "1. Visible artifacts at the boundary — be specific. Look for: edge sharpness mismatch, "
-    "halo or fringe around the patch, lighting/shadow direction inconsistent with surroundings, "
-    "color cast or white-balance shift, texture or paper-grain mismatch, JPEG block-grid "
-    "misalignment, double-compression streaks, ghosting from prior content underneath.\n"
-    "2. Why this looks pasted — connect the artifacts you actually see to the forgery hypothesis.\n\n"
+    "For EACH numbered region on the LEFT, do all of the following:\n"
+    "1. Describe the visible artifacts at the boundary in the LEFT image — be specific. "
+    "Look for: edge sharpness mismatch, halo or fringe around the patch, lighting/shadow "
+    "direction inconsistent with surroundings, color cast or white-balance shift, texture "
+    "or paper-grain mismatch, JPEG block-grid misalignment, double-compression streaks, "
+    "ghosting from prior content underneath.\n"
+    "2. Cross-reference against the RIGHT (ELA) image: is the same region brighter than "
+    "its surroundings in the ELA map? Strong agreement between a bbox and an ELA hotspot "
+    "is converging evidence; a bbox over a uniformly dark ELA region is weaker.\n"
+    "3. State why this looks pasted, connecting the artifacts you actually see to the "
+    "forgery hypothesis.\n\n"
     "Then provide:\n"
-    "• Verdict: forged / suspicious / genuine, with one-sentence justification.\n"
-    "• Caveats: anything benign that could explain the artifacts (compression, scanner edge "
-    "effects, folded paper, motion blur). Don't fabricate evidence — only describe what is "
-    "actually visible in the image.\n\n"
+    "• Verdict: forged / suspicious / no_forgery_detected, with one-sentence justification that "
+    "explicitly cites whether the ELA evidence reinforced or contradicted the bbox.\n"
+    "• Caveats: anything benign that could explain the artifacts or ELA brightness "
+    "(global re-compression, scanner edge effects, folded paper, motion blur, near-uniform "
+    "white regions which always look bright in ELA). Don't fabricate evidence — only "
+    "describe what is actually visible.\n\n"
     "Be concise. No more than 6 short paragraphs total."
 )
 
 GENERIC_VISION_PROMPT = (
-    "You are a forensic document examiner. The attached image has colored bounding boxes on "
-    "regions a detector flagged as potential {category} forgery.\n\n"
+    "You are a forensic document examiner. The attached panel shows TWO images side by side:\n"
+    "  • LEFT: the document with colored bounding boxes on regions flagged as potential "
+    "{category} forgery.\n"
+    "  • RIGHT: an Error Level Analysis (ELA) map of the same document. Bright pixels in "
+    "the ELA map indicate higher recompression error (typical of edited regions); uniform "
+    "dark areas indicate consistent compression history.\n\n"
     "Detected regions:\n{detection_lines}\n\n"
-    "For each numbered region, describe the visible artifacts in the image, explain why they "
-    "indicate {category}-type tampering, and give a verdict (forged / suspicious / genuine) "
-    "with brief justification. List benign explanations as caveats. Be concise."
+    "For each numbered region: describe the visible artifacts on the LEFT, cross-reference "
+    "against the ELA map on the RIGHT (does the bbox sit on an ELA hotspot, or on a "
+    "uniformly dark area?), and explain why these signals indicate {category}-type "
+    "tampering. Give a verdict (forged / suspicious / no_forgery_detected) with a one-sentence "
+    "justification that cites the ELA agreement. List benign explanations as caveats. "
+    "Be concise."
 )
 
 
@@ -83,11 +104,8 @@ def build_text_prompt(detections: List[Dict], category: Optional[str] = None) ->
 
 # ────────────── annotated-image helper ──────────────
 
-def render_annotated_image(image: Image.Image, detections: List[Dict], max_dim: int = 896) -> bytes:
-    """Draw numbered bboxes on a copy of the image, return JPEG bytes.
-
-    Capped at ~896px to keep token cost down on the vision model.
-    """
+def _draw_annotated(image: Image.Image, detections: List[Dict], max_dim: int = 896) -> Image.Image:
+    """Return a downscaled copy of `image` with numbered bboxes drawn on it."""
     img = image.copy().convert("RGB")
     if max(img.size) > max_dim:
         img.thumbnail((max_dim, max_dim), Image.LANCZOS)
@@ -112,8 +130,36 @@ def render_annotated_image(image: Image.Image, detections: List[Dict], max_dim: 
         draw.rectangle([x1, max(0, y1 - th - 4), x1 + tw + 6, y1], fill=color)
         draw.text((x1 + 3, max(0, y1 - th - 2)), label, fill="#ffffff", font=font)
 
+    return img
+
+
+def render_annotated_image(image: Image.Image, detections: List[Dict], max_dim: int = 896) -> bytes:
+    """Annotated image only (no ELA). Kept for non-vision callers that just want a thumb."""
     buf = io.BytesIO()
-    img.save(buf, format="JPEG", quality=85)
+    _draw_annotated(image, detections, max_dim).save(buf, format="JPEG", quality=85)
+    return buf.getvalue()
+
+
+def render_annotated_with_ela(
+    image: Image.Image,
+    detections: List[Dict],
+    max_dim: int = 768,
+    ela_quality: int = 90,
+    ela_amp: float = 12.0,
+) -> bytes:
+    """
+    Build the side-by-side `[annotated | ELA]` panel sent to the vision LLM.
+
+    Both halves are downscaled to `max_dim` first to keep the panel within
+    typical vision-model input limits.
+    """
+    annotated = _draw_annotated(image, detections, max_dim)
+    ela_full = compute_ela(image, quality=ela_quality, amp=ela_amp)
+    if max(ela_full.size) > max_dim:
+        ela_full.thumbnail((max_dim, max_dim), Image.LANCZOS)
+    panel = side_by_side([annotated, ela_full])
+    buf = io.BytesIO()
+    panel.save(buf, format="JPEG", quality=85)
     return buf.getvalue()
 
 
@@ -163,19 +209,42 @@ def call_groq_api(prompt: str) -> Optional[str]:
 
 
 def call_ollama_api(prompt: str) -> Optional[str]:
-    """Local Ollama fallback (text only)."""
+    """Local Ollama text-only call."""
     import requests
     try:
         response = requests.post(
             f"{OLLAMA_URL}/api/generate",
             json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False,
                   "options": {"temperature": 0.7, "num_predict": 256}},
-            timeout=30,
+            timeout=180,
         )
         if response.status_code == 200:
             return response.json().get("response", "Analysis complete.")
     except Exception as e:
         print(f"Ollama API error: {e}")
+    return None
+
+
+def call_ollama_vision_api(prompt: str, image_bytes: bytes) -> Optional[str]:
+    """Local Ollama vision call (multimodal model required, e.g. llama3.2-vision)."""
+    import requests
+    b64 = base64.b64encode(image_bytes).decode("ascii")
+    try:
+        response = requests.post(
+            f"{OLLAMA_URL}/api/chat",
+            json={
+                "model": OLLAMA_MODEL,
+                "messages": [{"role": "user", "content": prompt, "images": [b64]}],
+                "stream": False,
+                "options": {"temperature": 0.4, "num_predict": 600},
+            },
+            timeout=300,
+        )
+        if response.status_code == 200:
+            return (response.json().get("message", {}).get("content") or "").strip() or None
+        print(f"Ollama vision API status {response.status_code}: {response.text[:200]}")
+    except Exception as e:
+        print(f"Ollama vision API error: {e}")
     return None
 
 
@@ -186,15 +255,23 @@ def get_llm_explanation(
     category: Optional[str] = None,
     image: Optional[Image.Image] = None,
 ) -> str:
-    # Vision path: detections + image + Groq key available.
-    if detections and image is not None and USE_CLOUD_LLM and GROQ_API_KEY:
-        annotated = render_annotated_image(image, detections)
+    # Vision path: detections + image available. Cloud (Groq) preferred when configured,
+    # otherwise local Ollama if it's running a multimodal model (e.g. llama3.2-vision).
+    # The panel sent to the model is [annotated original | ELA map] so the LLM can
+    # cross-reference detection bboxes against ELA hotspots.
+    if detections and image is not None:
+        panel = render_annotated_with_ela(image, detections)
         prompt = build_vision_prompt(detections, category)
-        result = call_groq_vision_api(prompt, annotated)
-        if result:
-            return result
+        if USE_CLOUD_LLM and GROQ_API_KEY:
+            result = call_groq_vision_api(prompt, panel)
+            if result:
+                return result
+        else:
+            result = call_ollama_vision_api(prompt, panel)
+            if result:
+                return result
 
-    # Text-only path
+    # Text-only fallback (no image, or vision call failed)
     text_prompt = build_text_prompt(detections, category)
     if USE_CLOUD_LLM and GROQ_API_KEY:
         result = call_groq_api(text_prompt)

@@ -69,3 +69,6 @@ frontend/ios/DerivedData/
 # Android build artifacts
 *.apk
 *.aab
+
+# Personal notes / private docs
+SUGGESTIONS.md

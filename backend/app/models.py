@@ -48,7 +48,7 @@ class Scan(Base):
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
     filename = Column(String, nullable=False)
     category_analyzed = Column(String, nullable=True)
-    verdict = Column(String, nullable=False)  # forged, suspicious, genuine
+    verdict = Column(String, nullable=False)  # forged, suspicious, no_forgery_detected, not_a_document
     confidence_score = Column(Float, nullable=False)
     llm_explanation = Column(Text, nullable=True)
     annotations_json = Column(Text, nullable=True)  # JSON string of annotations

@@ -69,9 +69,10 @@ export default function About() {
       </Section>
 
       <Section title="What the verdicts mean">
-        <VerdictRow level="forged"     color="#dc2626" text={info.verdict_meaning.forged} />
-        <VerdictRow level="suspicious" color="#f97316" text={info.verdict_meaning.suspicious} />
-        <VerdictRow level="genuine"    color="#22c55e" text={info.verdict_meaning.genuine} />
+        <VerdictRow level="forged"               color="#dc2626" text={info.verdict_meaning.forged} />
+        <VerdictRow level="suspicious"           color="#f97316" text={info.verdict_meaning.suspicious} />
+        <VerdictRow level="no forgery detected"  color="#22c55e" text={info.verdict_meaning.no_forgery_detected} />
+        <VerdictRow level="not a document"       color="#737373" text={info.verdict_meaning.not_a_document} />
       </Section>
 
       <Section title="Limitations">

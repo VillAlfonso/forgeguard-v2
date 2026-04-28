@@ -55,6 +55,16 @@ YOLO_WEIGHTS_PATH = os.getenv("YOLO_WEIGHTS_PATH", "./weights/best.pt")
 CONFIDENCE_THRESHOLD = float(os.getenv("CONFIDENCE_THRESHOLD", "0.25"))
 
 # ============================================
+# ROBOFLOW (hosted inference for select categories)
+# ============================================
+# When set, the digital_cut_paste category routes to a Roboflow-hosted model
+# instead of a local YOLO checkpoint. Other categories continue to use local
+# weights until they are migrated.
+ROBOFLOW_API_KEY = os.getenv("ROBOFLOW_API_KEY", "")
+ROBOFLOW_API_URL = os.getenv("ROBOFLOW_API_URL", "https://serverless.roboflow.com")
+ROBOFLOW_CUT_PASTE_MODEL = os.getenv("ROBOFLOW_CUT_PASTE_MODEL", "find-cut-and-paste/1")
+
+# ============================================
 # APP
 # ============================================
 APP_NAME = "Revelator"
@@ -76,7 +86,7 @@ PRO_PRICE_USD = float(os.getenv("PRO_PRICE_USD", "5"))
 PREMIUM_PRICE_USD = float(os.getenv("PREMIUM_PRICE_USD", "10"))
 
 # Plans that include the AI/LLM-generated forensic explanation.
-LLM_PLANS = {"premium"}
+LLM_PLANS = {"pro", "premium"}
 
 # ============================================
 # EMAIL (optional, for password reset etc.)

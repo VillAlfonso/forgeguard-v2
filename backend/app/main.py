@@ -7,7 +7,7 @@ Full-stack document forgery detection with auth, payments, and scan history.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .config import APP_NAME, APP_VERSION, FRONTEND_URL, UPLOAD_DIR
+from .config import APP_NAME, APP_VERSION, FRONTEND_URL, UPLOAD_DIR, USE_CLOUD_LLM, OLLAMA_URL, OLLAMA_MODEL
 from .database import init_db
 from .forgery.detector import load_yolo_models, TRAINING_STATUS, yolo_models
 from .routes import auth, analyze, payments, admin
@@ -50,7 +50,42 @@ async def startup_event():
     load_yolo_models()
     trained_count = sum(1 for v in TRAINING_STATUS.values() if v)
     print(f"\n  Models ready: {trained_count}/16 trained")
+
+    # Warm up the local vision LLM so the first user request doesn't pay
+    # the cold-load cost (which can exceed the gate timeout on CPU-only setups).
+    if not USE_CLOUD_LLM:
+        await _warm_up_ollama()
+
     print("=" * 50 + "\n")
+
+
+async def _warm_up_ollama():
+    import asyncio
+    import requests
+
+    print(f"\nWarming up Ollama vision model ({OLLAMA_MODEL})...")
+    print("  This pre-loads the model so the first /analyze request is fast.")
+    print("  Cold load takes ~60-120s on CPU; subsequent requests reuse it.")
+
+    def _ping():
+        try:
+            # /api/generate with empty prompt is the canonical Ollama warm-up:
+            # it loads weights into memory without spending tokens.
+            r = requests.post(
+                f"{OLLAMA_URL}/api/generate",
+                json={"model": OLLAMA_MODEL, "prompt": "", "keep_alive": "30m"},
+                timeout=600,
+            )
+            r.raise_for_status()
+            return True
+        except Exception as e:
+            print(f"  Warm-up failed (non-fatal): {type(e).__name__}: {e}")
+            return False
+
+    loop = asyncio.get_event_loop()
+    ok = await loop.run_in_executor(None, _ping)
+    if ok:
+        print("  Vision model loaded and ready.")
 
 
 @app.get("/api/health")

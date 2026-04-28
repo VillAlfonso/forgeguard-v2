@@ -58,17 +58,41 @@ nano .env
 
 ### 3. Setup LLM (Choose One)
 
-**Option A: Local Ollama (Free)**
+The LLM looks at the annotated image plus the ELA map and explains the verdict.
+It needs a **multimodal (vision-capable)** model — text-only models won't work.
+
+**Option A: Local Ollama (Free, runs on your machine)**
 ```bash
-# Install Ollama: https://ollama.ai
-ollama pull llama3
+# 1. Install Ollama: https://ollama.com/download
+# 2. Pull a vision-capable model:
+ollama pull llama3.2-vision:11b
+# 3. In .env, leave defaults:
+#      USE_CLOUD_LLM=false
+#      OLLAMA_MODEL=llama3.2-vision:11b
+```
+Notes:
+- ~7.9 GB download. Needs ~10-12 GB free RAM during inference.
+- AMD integrated GPUs on Windows fall back to CPU — first call ~1-2 min, later
+  calls faster. Only discrete NVIDIA / RX 6000+ AMD GPUs get acceleration.
+- If 11B is too heavy, swap to a lighter vision model and update `OLLAMA_MODEL`:
+  `minicpm-v:8b` (~5.5 GB) or `llava-phi3:3.8b`.
+
+**Option B: Groq Cloud (Fast, recommended for production / live demos)**
+```bash
+# 1. Get API key: https://console.groq.com
+# 2. In .env, set:
+#      USE_CLOUD_LLM=true
+#      GROQ_API_KEY=sk_...
+#      GROQ_VISION_MODEL=meta-llama/llama-4-scout-17b-16e-instruct
 ```
 
-**Option B: Groq Cloud (Fast)**
+**Option C: Roboflow hosted detection (already wired for `digital_cut_paste`)**
 ```bash
-# Get API key: https://console.groq.com
-# Add to .env: GROQ_API_KEY=your_key
-# Set: USE_CLOUD_LLM=true
+# 1. Get a private API key from your Roboflow workspace settings.
+# 2. In .env, set:
+#      ROBOFLOW_API_KEY=...
+#      ROBOFLOW_CUT_PASTE_MODEL=find-cut-and-paste/1
+# Other categories continue to use local YOLO weights under models/<cat>/weights/best.pt.
 ```
 
 ### 4. Run Server
@@ -238,9 +262,21 @@ pip install ultralytics --upgrade
 
 **Ollama not connecting?**
 ```bash
-# Check if Ollama is running
+# Check if Ollama is running and what's pulled
 curl http://localhost:11434/api/tags
+# If empty, pull the vision model
+ollama pull llama3.2-vision:11b
 ```
+
+**Ollama returns 400 / "model does not support images"?**
+You're pointing at a text-only model. The explainer needs a vision-capable
+one. Set `OLLAMA_MODEL=llama3.2-vision:11b` (or another multimodal tag) in
+`.env` and restart the server.
+
+**LLM explanation is null on /analyze response?**
+The endpoint only generates explanations for accounts on `pro` or `premium`
+plans (`LLM_PLANS` in `backend/app/config.py`). Free accounts get the
+verdict and bounding boxes only.
 
 **CUDA out of memory?**
 - Reduce batch size: `--batch 8`

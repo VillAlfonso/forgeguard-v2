@@ -28,6 +28,7 @@ from ..forgery.detector import (
     run_yolo_inference, determine_verdict, get_training_warning,
 )
 from ..forgery.llm import get_llm_explanation
+from ..forgery.document_gate import check_is_document
 
 router = APIRouter(prefix="/api", tags=["analysis"])
 
@@ -126,14 +127,15 @@ def get_about_info():
         "pipeline": [
             {"step": 1, "name": "Upload", "detail": "Image arrives over HTTPS, normalized to RGB."},
             {"step": 2, "name": "Inference", "detail": "A YOLO object-detection model trained for the chosen forgery category scans the image."},
-            {"step": 3, "name": "Aggregation", "detail": "Detected regions are scored; verdict is forged / suspicious / genuine based on confidence and detection count."},
+            {"step": 3, "name": "Aggregation", "detail": "Detected regions are scored; verdict is forged / suspicious / no_forgery_detected based on confidence and detection count."},
             {"step": 4, "name": "Explanation (optional)", "detail": "An LLM generates a plain-language summary of the findings, available on the LLM-tier plan."},
             {"step": 5, "name": "History", "detail": "The image and findings are stored against your account so you can revisit any scan."},
         ],
         "verdict_meaning": {
-            "forged":     "High-confidence detections matching known forgery patterns. Manual review still recommended.",
-            "suspicious": "Anomalies present but below the strong-evidence threshold. Treat as inconclusive.",
-            "genuine":    "No matches above the detection threshold. Absence of evidence ≠ proof of authenticity.",
+            "forged":               "High-confidence detections matching known forgery patterns. Manual review still recommended.",
+            "suspicious":           "Anomalies present but below the strong-evidence threshold. Treat as inconclusive.",
+            "no_forgery_detected":  "No matches above the detection threshold. Absence of evidence is not proof of authenticity.",
+            "not_a_document":       "The upload doesn't appear to be a paper document, ID, certificate, receipt, or similar. Skipped without scoring.",
         },
         "limitations": [
             "Detection quality is bounded by training-set size and diversity. Classes with few samples will miss subtle cases.",
@@ -175,6 +177,28 @@ def analyze_document(
         width, height = image.size
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Invalid image: {str(e)}")
+
+    # Document gate — short-circuit before quota and DB write so users aren't
+    # charged scans for non-document uploads.
+    is_doc, gate_reason = check_is_document(image)
+    if not is_doc:
+        return {
+            "scan_id": None,
+            "category_analyzed": category,
+            "verdict": "not_a_document",
+            "confidence_score": 0.0,
+            "llm_explanation": gate_reason or (
+                "This does not appear to be a document. Please upload a paper "
+                "document, ID, certificate, receipt, or similar."
+            ),
+            "llm_locked": False,
+            "llm_required_plan": "pro",
+            "annotations": [],
+            "original_image_dimensions": {"width": width, "height": height},
+            "timestamp": datetime.now().isoformat(),
+            "training_warning": None,
+            "category_trained": False,
+        }
 
     # Run YOLO
     detections = run_yolo_inference(image, category)
@@ -240,7 +264,7 @@ def analyze_document(
         "confidence_score": confidence,
         "llm_explanation": llm_explanation,
         "llm_locked": current_user.plan not in LLM_PLANS,
-        "llm_required_plan": "premium",
+        "llm_required_plan": "pro",
         "annotations": annotations,
         "original_image_dimensions": {"width": width, "height": height},
         "timestamp": datetime.now().isoformat(),
@@ -306,6 +330,7 @@ def get_history(
                 "confidence_score": s.confidence_score,
                 "created_at": s.created_at.isoformat() if s.created_at else "",
                 "has_image": bool(s.image_path),
+                "has_llm_explanation": bool(s.llm_explanation),
             }
             for s in scans
         ],
@@ -331,7 +356,7 @@ def get_scan_detail(
         "confidence_score": scan.confidence_score,
         "llm_explanation": scan.llm_explanation,
         "llm_locked": (not scan.llm_explanation) and (current_user.plan not in LLM_PLANS),
-        "llm_required_plan": "premium",
+        "llm_required_plan": "pro",
         "annotations": json.loads(scan.annotations_json) if scan.annotations_json else [],
         "image_width": scan.image_width,
         "image_height": scan.image_height,

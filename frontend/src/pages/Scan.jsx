@@ -173,7 +173,18 @@ export default function Scan() {
 
   // ───── upload step ─────
   const groupMethods = group ? (methodsByCategory[group.backendCategory] || []) : [];
-  const verdictColors = { forged: '#dc2626', suspicious: '#f97316', genuine: '#22c55e' };
+  const verdictColors = {
+    forged: '#dc2626',
+    suspicious: '#f97316',
+    no_forgery_detected: '#22c55e',
+    not_a_document: '#737373',
+  };
+  const verdictLabels = {
+    forged: 'Forged',
+    suspicious: 'Suspicious',
+    no_forgery_detected: 'No Forgery Detected',
+    not_a_document: 'Not a Document',
+  };
 
   return (
     <div>
@@ -296,7 +307,7 @@ export default function Scan() {
                 fontSize: 32, fontWeight: 700, color: verdictColors[result.verdict],
                 textTransform: 'uppercase', letterSpacing: 4,
               }}>
-                {result.verdict}
+                {verdictLabels[result.verdict] || result.verdict}
               </div>
               <div className="mono" style={{ color: '#a3a3a3', marginTop: 8 }}>
                 Confidence: {(result.confidence_score * 100).toFixed(1)}%

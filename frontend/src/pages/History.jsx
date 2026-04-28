@@ -61,7 +61,18 @@ export default function History() {
   );
 }
 
-const verdictColors = { forged: '#dc2626', suspicious: '#f97316', genuine: '#22c55e' };
+const verdictColors = {
+  forged: '#dc2626',
+  suspicious: '#f97316',
+  no_forgery_detected: '#22c55e',
+  not_a_document: '#737373',
+};
+const verdictLabels = {
+  forged: 'Forged',
+  suspicious: 'Suspicious',
+  no_forgery_detected: 'No Forgery Detected',
+  not_a_document: 'Not a Document',
+};
 
 function HistoryCard({ scan, onClick }) {
   const borderColor = verdictColors[scan.verdict] || '#262626';
@@ -105,10 +116,30 @@ function HistoryCard({ scan, onClick }) {
       </div>
       <div style={{ padding: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-          <span className={`badge badge-${scan.verdict}`}>{scan.verdict}</span>
-          <span className="mono" style={{ fontSize: 11, color: '#a3a3a3' }}>
-            {(scan.confidence_score * 100).toFixed(0)}%
-          </span>
+          <span className={`badge badge-${scan.verdict}`}>{verdictLabels[scan.verdict] || scan.verdict}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {scan.has_llm_explanation && (
+              <span
+                title="AI forensic explanation available"
+                className="oswald"
+                style={{
+                  fontSize: 9,
+                  letterSpacing: 1,
+                  textTransform: 'uppercase',
+                  color: '#c4b5fd',
+                  background: 'rgba(139,92,246,0.12)',
+                  border: '1px solid rgba(139,92,246,0.4)',
+                  borderRadius: 3,
+                  padding: '1px 5px',
+                }}
+              >
+                AI
+              </span>
+            )}
+            <span className="mono" style={{ fontSize: 11, color: '#a3a3a3' }}>
+              {(scan.confidence_score * 100).toFixed(0)}%
+            </span>
+          </div>
         </div>
         <div style={{ fontSize: 13, color: '#d4d4d4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {scan.filename}
@@ -180,7 +211,7 @@ function ScanDetailView({ detail, onBack }) {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 20 }}>
-          <StatBox label="Verdict" value={detail.verdict} color={verdictColors[detail.verdict]} oswald />
+          <StatBox label="Verdict" value={verdictLabels[detail.verdict] || detail.verdict} color={verdictColors[detail.verdict]} oswald />
           <StatBox label="Confidence" value={`${(detail.confidence_score * 100).toFixed(1)}%`} color="#f5c518" mono />
           <StatBox label="File" value={detail.filename} color="#a3a3a3" mono small />
           <StatBox label="Date" value={new Date(detail.created_at).toLocaleString()} color="#a3a3a3" mono small />

@@ -7,6 +7,7 @@ from typing import Optional, List, Dict
 from PIL import Image
 
 from ..config import CONFIDENCE_THRESHOLD
+from . import roboflow_client
 
 # ============================================
 # CLASS LABELS - Map YOLO class indices to labels
@@ -109,6 +110,10 @@ def load_yolo_models() -> bool:
                 print(f"  Loaded: {type_name}")
             except Exception as e:
                 print(f"  Failed: {type_name} - {e}")
+        elif roboflow_client.is_configured(type_name):
+            TRAINING_STATUS[type_name] = True
+            loaded_count += 1
+            print(f"  Loaded: {type_name} (roboflow)")
 
     print(f"\n  Models loaded: {loaded_count}/{len(TRAINING_STATUS)}")
 
@@ -132,6 +137,20 @@ def get_model_for_category(category: Optional[str] = None):
 def run_yolo_inference(image: Image.Image, category: Optional[str] = None) -> List[Dict]:
     detections = []
 
+    # Dispatch Roboflow-hosted categories first; they bypass the local YOLO loop.
+    if category and roboflow_client.is_configured(category):
+        preds = roboflow_client.infer(image, category)
+        detections.extend(roboflow_client.to_detections(preds, category, CLASS_LABELS, NAME_TO_CLASS))
+        detections.sort(key=lambda x: x["confidence"], reverse=True)
+        return detections
+
+    if category is None:
+        # Preliminary scan: also run any Roboflow-hosted categories.
+        for cat in NAME_TO_CLASS:
+            if roboflow_client.is_configured(cat):
+                preds = roboflow_client.infer(image, cat)
+                detections.extend(roboflow_client.to_detections(preds, cat, CLASS_LABELS, NAME_TO_CLASS))
+
     if category:
         models_to_run = {category: yolo_models.get(category)}
         if models_to_run[category] is None:
@@ -147,7 +166,8 @@ def run_yolo_inference(image: Image.Image, category: Optional[str] = None) -> Li
             if default_model:
                 models_to_run = {"_default": default_model}
             else:
-                return []
+                detections.sort(key=lambda x: x["confidence"], reverse=True)
+                return detections
 
     for model_name, model in models_to_run.items():
         if model is None:
@@ -192,8 +212,11 @@ def run_yolo_inference(image: Image.Image, category: Optional[str] = None) -> Li
 
 
 def determine_verdict(detections: List[Dict]) -> tuple:
+    """Return (verdict, confidence). 'no_forgery_detected' is intentional —
+    the model finding nothing is *not* the same as proving authenticity, and
+    'genuine' overclaims. See the About page for the full caveat."""
     if not detections:
-        return "genuine", 0.15
+        return "no_forgery_detected", 0.15
     max_conf = max(d["confidence"] for d in detections)
     avg_conf = sum(d["confidence"] for d in detections) / len(detections)
     confidence = (max_conf * 0.7) + (avg_conf * 0.3)
@@ -202,7 +225,7 @@ def determine_verdict(detections: List[Dict]) -> tuple:
     elif confidence >= 0.50:
         return "suspicious", confidence
     else:
-        return "genuine", confidence
+        return "no_forgery_detected", confidence
 
 
 def get_training_warning(category: Optional[str], detections: List[Dict]) -> Optional[str]:
