@@ -90,8 +90,23 @@ yolo_models: Dict = {}
 MODELS_DIR = Path(__file__).parent.parent.parent.parent / "models"
 
 
+def _count_dataset_images():
+  """Count actual images in dataset folders to auto-populate DATASET_COUNTS."""
+  for category in DATASET_COUNTS.keys():
+    category_dir = MODELS_DIR / category
+    count = 0
+    for split in ["train", "valid", "test"]:
+      images_dir = category_dir / split / "images"
+      if images_dir.exists():
+        count += len([f for f in images_dir.glob("*") if f.suffix.lower() in [".jpg", ".jpeg", ".png"]])
+    DATASET_COUNTS[category] = count
+
+
 def load_yolo_models() -> bool:
     global yolo_models
+
+    # Auto-count images in dataset folders
+    _count_dataset_images()
 
     try:
         from ultralytics import YOLO

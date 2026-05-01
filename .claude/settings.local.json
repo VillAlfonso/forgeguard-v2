@@ -29,7 +29,16 @@
       "Read(//c//**)",
       "Bash(rm -rf C:/Revelator/roboflow_dump)",
       "Bash(pip show *)",
-      "Bash(timeout 8 npm run dev)"
+      "Bash(timeout 8 npm run dev)",
+      "Bash(curl -s -w \"\\\\n%{http_code}\\\\n\" http://localhost:8000/api/samples/digital_cut_paste/image/train/cord_0152_forge_007.jpg)",
+      "Bash(curl -s http://localhost:8000/api/samples/addition_insertion)",
+      "Bash(curl -s http://localhost:5173)",
+      "Bash(curl -s -H \"Host: localhost:5173\" http://localhost:5173/api/samples/digital_cut_paste)",
+      "Bash(pkill -f \"python run.py\")",
+      "Bash(pkill -f \"npm run dev\")",
+      "Bash(kill 42 70)",
+      "Bash(curl -s http://localhost:8000/api/categories)",
+      "Bash(curl -s http://localhost:5173/api/categories)"
     ]
   }
 }

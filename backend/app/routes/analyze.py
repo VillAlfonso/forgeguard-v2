@@ -24,7 +24,7 @@ from ..config import (
 )
 from ..forgery.detector import (
     CLASS_LABELS, NAME_TO_CLASS, VALID_CATEGORIES, TRAINING_STATUS,
-    DATASET_COUNTS, LIMITED_DATA_THRESHOLD,
+    DATASET_COUNTS, LIMITED_DATA_THRESHOLD, MODELS_DIR,
     run_yolo_inference, determine_verdict, get_training_warning,
 )
 from ..forgery.llm import get_llm_explanation
@@ -100,6 +100,67 @@ def get_categories():
             "total_dataset_images": sum(DATASET_COUNTS.values()),
         },
     }
+
+
+@router.get("/samples/{category_id}")
+def get_samples(category_id: str):
+    """List available sample images from a category's training dataset."""
+    if category_id not in VALID_CATEGORIES:
+        raise HTTPException(status_code=400, detail=f"Invalid category: {category_id}")
+
+    category_dir = MODELS_DIR / category_id
+    if not category_dir.exists():
+        raise HTTPException(status_code=404, detail=f"Dataset not found for {category_id}")
+
+    samples = []
+
+    # Collect images from train, valid, test folders
+    for split in ["train", "valid", "test"]:
+        split_dir = category_dir / split / "images"
+        if split_dir.exists():
+            # Get all image files (jpg, png, etc.)
+            image_files = sorted([
+                f.name for f in split_dir.glob("*")
+                if f.is_file() and f.suffix.lower() in [".jpg", ".jpeg", ".png"]
+            ])
+            # Randomize and limit to 5 per split for display
+            if image_files:
+                selected = random.sample(image_files, min(5, len(image_files)))
+                for filename in selected:
+                    samples.append({
+                        "filename": filename,
+                        "split": split,
+                        "url": f"/api/samples/{category_id}/image/{split}/{filename}"
+                    })
+
+    return {
+        "category_id": category_id,
+        "total_available": len(samples),
+        "samples": samples,
+    }
+
+
+@router.get("/samples/{category_id}/image/{split}/{filename}")
+def get_sample_image(category_id: str, split: str, filename: str):
+    """Serve a sample image from the training dataset."""
+    if category_id not in VALID_CATEGORIES:
+        raise HTTPException(status_code=400, detail="Invalid category")
+
+    if split not in ["train", "valid", "test"]:
+        raise HTTPException(status_code=400, detail="Invalid split")
+
+    # Guard against path traversal
+    if "/" in filename or "\\" in filename or ".." in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    file_path = (MODELS_DIR / category_id / split / "images" / filename).resolve()
+
+    # Verify the file is within the expected directory
+    expected_dir = (MODELS_DIR / category_id / split / "images").resolve()
+    if not str(file_path).startswith(str(expected_dir)) or not file_path.exists():
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    return FileResponse(file_path)
 
 
 @router.get("/about")

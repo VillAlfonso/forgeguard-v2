@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import APP_NAME, APP_VERSION, FRONTEND_URL, UPLOAD_DIR, USE_CLOUD_LLM, OLLAMA_URL, OLLAMA_MODEL
 from .database import init_db
-from .forgery.detector import load_yolo_models, TRAINING_STATUS, yolo_models
+from .forgery.detector import load_yolo_models, TRAINING_STATUS, DATASET_COUNTS, yolo_models
 from .routes import auth, analyze, payments, admin
 
 app = FastAPI(title=f"{APP_NAME} API", description="AI-powered document forgery detection SaaS", version=APP_VERSION)
@@ -45,11 +45,13 @@ async def startup_event():
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     print(f"  Upload directory: {UPLOAD_DIR}")
 
-    # Load YOLO models
-    print("\nLoading YOLO models...")
+    # Load YOLO models and count dataset images
+    print("\nLoading YOLO models and counting datasets...")
     load_yolo_models()
     trained_count = sum(1 for v in TRAINING_STATUS.values() if v)
-    print(f"\n  Models ready: {trained_count}/16 trained")
+    total_images = sum(DATASET_COUNTS.values())
+    print(f"  Models ready: {trained_count}/16 trained")
+    print(f"  Dataset images: {total_images:,} total")
 
     # Warm up the local vision LLM so the first user request doesn't pay
     # the cold-load cost (which can exceed the gate timeout on CPU-only setups).

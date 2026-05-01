@@ -8,6 +8,8 @@ export default function SampleGallery() {
   const navigate = useNavigate();
   const cat = CATEGORY_BY_ID[categoryId];
   const [stats, setStats] = useState(null);
+  const [samples, setSamples] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!cat) return;
@@ -19,6 +21,21 @@ export default function SampleGallery() {
       setStats({ total, trained, threshold: data.limited_data_threshold || 200 });
     }).catch(() => {});
   }, [categoryId]);
+
+  useEffect(() => {
+    if (!cat) return;
+    setLoading(true);
+    fetch(`/api/samples/${cat.apiKey}`)
+      .then(r => r.json())
+      .then(data => {
+        setSamples(data.samples || []);
+        setLoading(false);
+      })
+      .catch(() => {
+        setSamples([]);
+        setLoading(false);
+      });
+  }, [categoryId, cat]);
 
   if (!cat) {
     return (
@@ -33,7 +50,6 @@ export default function SampleGallery() {
 
   const guidance = GUIDANCE[categoryId] || { shooting: [], detector: '' };
   const accent = cat.color;
-  const samples = [1, 2, 3, 4, 5];
 
   return (
     <div>
@@ -93,13 +109,13 @@ export default function SampleGallery() {
         }}>
           <DatasetStat
             label="Training Images"
-            value={stats.total.toLocaleString()}
-            color={stats.total >= stats.threshold ? '#00ff66' : (stats.total > 0 ? '#ffa040' : '#ff3344')}
+            value={stats.total > 0 ? stats.total.toLocaleString() : 'No data yet'}
+            color={stats.total >= stats.threshold ? '#00ff66' : (stats.total > 0 ? '#ffa040' : '#86efac')}
           />
           <DatasetStat
-            label="Detector"
-            value={stats.trained ? 'Active' : 'Pending'}
-            color={stats.trained ? '#00ff66' : '#ffa040'}
+            label="Detector Status"
+            value={stats.total >= stats.threshold ? 'Ready' : (stats.total > 0 ? 'Training' : 'Awaiting Data')}
+            color={stats.total >= stats.threshold ? '#00ff66' : (stats.total > 0 ? '#ffa040' : '#86efac')}
           />
           <DatasetStat
             label="Min Threshold"
@@ -128,7 +144,7 @@ export default function SampleGallery() {
         </div>
       )}
 
-      {stats && stats.total < stats.threshold && (
+      {stats && stats.total > 0 && stats.total < stats.threshold && (
         <div style={{
           background: 'rgba(255,160,64,0.08)', border: '1px solid rgba(255,160,64,0.4)',
           padding: 12, borderRadius: 3, marginBottom: 24, fontSize: 13, color: '#ffc888',
@@ -137,8 +153,23 @@ export default function SampleGallery() {
         }}>
           <span>⚠</span>
           <span>
-            <strong>Limited data:</strong> this category has fewer than {stats.threshold.toLocaleString()} training images
-            ({stats.total.toLocaleString()} so far). Verdicts may be less reliable while collection continues.
+            <strong>Limited data:</strong> only {stats.total.toLocaleString()} / {stats.threshold.toLocaleString()} training images collected.
+            Detector accuracy may improve as more samples are gathered.
+          </span>
+        </div>
+      )}
+
+      {stats && stats.total === 0 && (
+        <div style={{
+          background: 'rgba(255,102,102,0.08)', border: '1px solid rgba(255,102,102,0.4)',
+          padding: 12, borderRadius: 3, marginBottom: 24, fontSize: 13, color: '#ff9999',
+          display: 'flex', gap: 10, alignItems: 'flex-start',
+          fontFamily: "'JetBrains Mono', monospace",
+        }}>
+          <span>◐</span>
+          <span>
+            <strong>No training data:</strong> this category is awaiting dataset samples.
+            Sample images will appear here once the dataset is populated.
           </span>
         </div>
       )}
@@ -184,14 +215,33 @@ export default function SampleGallery() {
       </div>
 
       <h2 className="oswald" style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 2.5, color: '#6dba85', marginBottom: 14 }}>
-        ▸ Annotated Examples
+        ▸ Dataset Examples
       </h2>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {samples.map(n => (
-          <SamplePair key={n} categoryId={categoryId} index={n} catColor={accent} />
-        ))}
-      </div>
+      {loading && (
+        <div style={{ textAlign: 'center', padding: 40, color: '#86efac' }}>
+          <p className="mono">Loading samples...</p>
+        </div>
+      )}
+
+      {!loading && samples.length === 0 && (
+        <div style={{ textAlign: 'center', padding: 40, color: '#86efac' }}>
+          <p className="mono">No sample images available yet</p>
+        </div>
+      )}
+
+      {!loading && samples.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+          {samples.map((sample, idx) => (
+            <SampleImage
+              key={`${sample.split}-${sample.filename}`}
+              src={sample.url}
+              label={`${sample.split.toUpperCase()}: ${sample.filename}`}
+              catColor={accent}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -212,84 +262,103 @@ function DatasetStat({ label, value, color }) {
   );
 }
 
-function SamplePair({ categoryId, index, catColor }) {
-  return (
-    <div className="card" style={{ padding: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-        <span className="oswald" style={{
-          fontSize: 12, letterSpacing: 2, color: '#86efac', textTransform: 'uppercase',
-        }}>
-          Sample {String(index).padStart(2, '0')}
-        </span>
-        <span className="mono" style={{ fontSize: 9, color: '#3f6e4a', letterSpacing: 1.5 }}>
-          ANNOTATED · ORIGINAL
-        </span>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        <SampleImage
-          src={`/samples/${categoryId}/${index}-annotated.jpg`}
-          label="ANNOTATED"
-          catColor={catColor}
-          variant="annotated"
-        />
-        <SampleImage
-          src={`/samples/${categoryId}/${index}-original.jpg`}
-          label="ORIGINAL"
-          catColor={catColor}
-          variant="original"
-        />
-      </div>
-    </div>
-  );
-}
-
-function SampleImage({ src, label, catColor, variant }) {
+function SampleImage({ src, label, catColor }) {
   const [errored, setErrored] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   return (
-    <div style={{
-      aspectRatio: '4/3',
-      background: '#000',
-      border: '1px solid #112418',
-      borderRadius: 2,
-      position: 'relative',
-      overflow: 'hidden',
-    }}>
-      {!errored && (
-        <img
-          src={src}
-          alt={label}
-          onError={() => setErrored(true)}
-          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-        />
-      )}
-      {errored && (
-        <div style={{
-          position: 'absolute', inset: 0,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          background:
-            variant === 'annotated'
-              ? `repeating-linear-gradient(45deg, #000 0 12px, #0a120c 12px 24px)`
-              : '#000',
-          color: '#3f6e4a',
-          gap: 6,
-        }}>
-          <span className="mono" style={{ fontSize: 10, color: catColor, letterSpacing: 2 }}>
-            {label}
-          </span>
-          <span style={{ fontSize: 11, color: '#3f6e4a' }}>image not yet provided</span>
-        </div>
-      )}
-      <span className="mono" style={{
-        position: 'absolute', top: 6, left: 6,
-        fontSize: 9, padding: '2px 6px', borderRadius: 2,
-        background: 'rgba(0,0,0,0.85)', color: variant === 'annotated' ? catColor : '#86efac',
-        letterSpacing: 1.5,
-        border: variant === 'annotated' ? `1px solid ${catColor}50` : '1px solid #112418',
-      }}>
-        {label}
-      </span>
+    <div
+      className="card"
+      style={{
+        position: 'relative',
+        overflow: 'hidden',
+        background: '#000',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <div
+        style={{
+          aspectRatio: '4/3',
+          background: '#000',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        {!errored && (
+          <img
+            src={src}
+            alt={label}
+            onError={() => setErrored(true)}
+            onLoad={() => setLoaded(true)}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: 'block',
+              opacity: loaded ? 1 : 0,
+              transition: 'opacity 0.3s',
+            }}
+          />
+        )}
+        {!loaded && !errored && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'repeating-linear-gradient(45deg, #000 0 12px, #0a120c 12px 24px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#3f6e4a',
+            }}
+          >
+            <span className="mono" style={{ fontSize: 11 }}>Loading...</span>
+          </div>
+        )}
+        {errored && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: `repeating-linear-gradient(45deg, #000 0 12px, #0a120c 12px 24px)`,
+              color: '#3f6e4a',
+              gap: 6,
+            }}
+          >
+            <span className="mono" style={{ fontSize: 10, color: catColor, letterSpacing: 2 }}>
+              ERROR
+            </span>
+            <span style={{ fontSize: 11 }}>failed to load</span>
+          </div>
+        )}
+        <span
+          className="mono"
+          style={{
+            position: 'absolute',
+            top: 6,
+            left: 6,
+            fontSize: 9,
+            padding: '2px 6px',
+            borderRadius: 2,
+            background: 'rgba(0,0,0,0.85)',
+            color: catColor,
+            letterSpacing: 1.5,
+            border: `1px solid ${catColor}50`,
+          }}
+        >
+          {label.split(':')[0]}
+        </span>
+      </div>
+      <div style={{ padding: 10, borderTop: '1px solid #112418' }}>
+        <p className="mono" style={{ fontSize: 10, color: '#86efac', margin: 0, wordBreak: 'break-all' }}>
+          {label.split(':')[1]?.trim()}
+        </p>
+      </div>
     </div>
   );
 }
