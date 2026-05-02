@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../App';
 import { api } from '../api/client';
 import Logo from '../components/Logo';
@@ -84,6 +85,36 @@ export default function Login() {
             {loading ? '◌ Authenticating…' : '▶ Sign In'}
           </button>
         </form>
+
+        <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid #112418' }}>
+          <p className="mono" style={{ fontSize: 10, color: '#3f6e4a', textAlign: 'center', marginBottom: 12, letterSpacing: 1 }}>
+            OR SIGN IN WITH
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <GoogleLogin
+              onSuccess={async (credentialResponse) => {
+                setError('');
+                setLoading(true);
+                try {
+                  const data = await api.googleLogin(credentialResponse.credential);
+                  loginUser(data);
+                  navigate('/scan');
+                } catch (err) {
+                  setError(err.message);
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              onError={() => {
+                setError('Google sign-in failed');
+              }}
+              theme="filled_black"
+              shape="rectangular"
+              text="signin_with_google"
+              size="large"
+            />
+          </div>
+        </div>
 
         <p style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: '#86efac' }}>
           New here? <Link to="/register">Create an account</Link>

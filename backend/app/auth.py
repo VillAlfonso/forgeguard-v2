@@ -28,6 +28,8 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(plain: str, hashed: str) -> bool:
+    if not hashed:  # No password (e.g., Google OAuth users)
+        return False
     try:
         return bcrypt.checkpw(_pw_bytes(plain), hashed.encode("utf-8"))
     except ValueError:

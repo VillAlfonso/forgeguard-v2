@@ -27,6 +27,12 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
 REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "30"))
 
 # ============================================
+# OAUTH (Google)
+# ============================================
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
+
+# ============================================
 # PAYMENTS (Stripe)
 # ============================================
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")

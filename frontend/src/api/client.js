@@ -96,6 +96,13 @@ export const api = {
     });
   },
 
+  googleLogin(idToken) {
+    return request('/auth/google', {
+      method: 'POST', noAuth: true,
+      body: JSON.stringify({ id_token: idToken }),
+    });
+  },
+
   getMe() {
     return request('/auth/me');
   },
