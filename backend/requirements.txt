@@ -24,7 +24,7 @@ ultralytics>=8.3.0
 
 # LLM Options
 groq>=0.11
-requests>=2.32
+requests>=2.32  # Used for PayMongo API calls
 
 # Payments (optional - install when ready)
 stripe>=10.0

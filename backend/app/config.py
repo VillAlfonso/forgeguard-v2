@@ -33,8 +33,9 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
 
 # ============================================
-# PAYMENTS (Stripe)
+# PAYMENTS (Stripe & PayMongo)
 # ============================================
+# Stripe (global, card-based)
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
@@ -42,6 +43,10 @@ STRIPE_PRICE_ID_PRO = os.getenv("STRIPE_PRICE_ID_PRO", "")
 STRIPE_PRICE_ID_PREMIUM = os.getenv("STRIPE_PRICE_ID_PREMIUM", "")
 # Legacy alias — old "basic" tier maps to new "pro". Keep so existing .env files still load.
 STRIPE_PRICE_ID_BASIC = os.getenv("STRIPE_PRICE_ID_BASIC", STRIPE_PRICE_ID_PRO)
+
+# PayMongo (Philippines, cards + e-wallets)
+PAYMONGO_SECRET_KEY = os.getenv("PAYMONGO_SECRET_KEY", "")
+PAYMONGO_PUBLIC_KEY = os.getenv("PAYMONGO_PUBLIC_KEY", "")
 
 # ============================================
 # LLM

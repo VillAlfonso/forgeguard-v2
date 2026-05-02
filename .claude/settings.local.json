@@ -42,7 +42,19 @@
       "Bash(killall python *)",
       "Bash(python3)",
       "Bash(kill -9 288)",
-      "Bash(curl -s http://localhost:5173/api/health)"
+      "Bash(curl -s http://localhost:5173/api/health)",
+      "WebSearch",
+      "Bash(xargs grep *)",
+      "WebFetch(domain:universe.roboflow.com)",
+      "WebFetch(domain:app.roboflow.com)",
+      "Bash(.venv-train/Scripts/python)",
+      "Bash(unzip -q \"*.zip\")",
+      "Bash(unzip -q dataset.zip)",
+      "Bash(.venv-train/Scripts/python synthesize_indentation.py --count 150 --negatives 30)",
+      "Bash(/c/Revelator/.venv-train/Scripts/python C:/Revelator/models/traced_indentation/synthesize_indentation.py --count 150 --negatives 30)",
+      "Bash(/c/Revelator/.venv-train/Scripts/python C:/Revelator/models/traced_indentation/synthesize_indentation.py --real-dir /c/Revelator/models/traced_indentation/train/images --clean-dir /c/Revelator/clean/Datasets1 --output-dir /c/Revelator/models/traced_indentation/synthetic --count 150 --negatives 30)",
+      "Bash(xargs echo *)",
+      "Bash(grep -E \"\\\\.\\(py|js|jsx\\)$\")"
     ]
   }
 }

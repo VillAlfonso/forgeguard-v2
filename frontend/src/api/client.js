@@ -152,10 +152,19 @@ export const api = {
     return request('/payments/plans');
   },
 
-  createCheckout(plan) {
+  createCheckout(plan, paymentMethod = 'stripe') {
+    if (paymentMethod === 'paymongo') {
+      return request('/payments/paymongo-checkout', {
+        method: 'POST', body: JSON.stringify({ plan, payment_method: 'paymongo' }),
+      });
+    }
     return request('/payments/create-checkout', {
-      method: 'POST', body: JSON.stringify({ plan }),
+      method: 'POST', body: JSON.stringify({ plan, payment_method: 'stripe' }),
     });
+  },
+
+  getPaymongoPublicKey() {
+    return request('/payments/paymongo-public-key', { noAuth: true });
   },
 
   cancelSubscription() {

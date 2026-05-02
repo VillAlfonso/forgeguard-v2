@@ -1,7 +1,9 @@
 """
-Stripe payment routes for subscription management.
+Payment routes for Stripe and PayMongo subscription management.
 """
 
+import base64
+import requests
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -12,6 +14,7 @@ from ..models import User
 from ..config import (
     STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY, STRIPE_WEBHOOK_SECRET,
     STRIPE_PRICE_ID_PRO, STRIPE_PRICE_ID_PREMIUM, FRONTEND_URL,
+    PAYMONGO_SECRET_KEY, PAYMONGO_PUBLIC_KEY,
     PRO_PRICE_USD, PREMIUM_PRICE_USD,
 )
 
@@ -38,6 +41,17 @@ PLAN_PRICE_MAP = {
 
 class CheckoutRequest(BaseModel):
     plan: str  # "pro" or "premium"
+    payment_method: str = "stripe"  # "stripe" or "paymongo"
+
+
+def get_paymongo():
+    """Lazy import and validate PayMongo configuration."""
+    if not PAYMONGO_SECRET_KEY:
+        raise HTTPException(status_code=503, detail="PayMongo is not configured. Add PAYMONGO_SECRET_KEY to .env")
+    return {
+        "secret_key": PAYMONGO_SECRET_KEY,
+        "public_key": PAYMONGO_PUBLIC_KEY,
+    }
 
 
 @router.get("/plans")
@@ -160,3 +174,106 @@ def cancel_subscription(
     stripe = get_stripe()
     stripe.Subscription.modify(current_user.stripe_subscription_id, cancel_at_period_end=True)
     return {"message": "Subscription will cancel at end of billing period"}
+
+
+# ============================================
+# PayMongo Payment Routes
+# ============================================
+
+@router.post("/paymongo-checkout")
+def create_paymongo_checkout(
+    body: CheckoutRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Create a PayMongo payment link for subscription."""
+    paymongo = get_paymongo()
+
+    amount_cents = int(PRO_PRICE_USD * 100) if body.plan == "pro" else int(PREMIUM_PRICE_USD * 100)
+
+    # Create PayMongo charge with webhook
+    auth_string = base64.b64encode(f"{paymongo['secret_key']}:".encode()).decode()
+    headers = {
+        "Authorization": f"Basic {auth_string}",
+        "Content-Type": "application/json",
+    }
+
+    payload = {
+        "data": {
+            "attributes": {
+                "amount": amount_cents,
+                "currency": "PHP",
+                "description": f"Revelator {body.plan.upper()} Plan",
+                "statement_descriptor": "REVELATOR",
+                "redirect": {
+                    "success": f"{FRONTEND_URL}/account?payment=success&provider=paymongo",
+                    "failed": f"{FRONTEND_URL}/account?payment=cancelled",
+                },
+                "metadata": {
+                    "user_id": current_user.id,
+                    "plan": body.plan,
+                    "email": current_user.email,
+                },
+            }
+        }
+    }
+
+    try:
+        response = requests.post(
+            "https://api.paymongo.com/v1/checkout_sessions",
+            json=payload,
+            headers=headers,
+            timeout=10,
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        checkout_url = data["data"]["attributes"]["checkout_url"]
+        session_id = data["data"]["id"]
+
+        # Store session for webhook reference
+        current_user.paymongo_source_id = session_id
+        db.commit()
+
+        return {"checkout_url": checkout_url, "session_id": session_id, "provider": "paymongo"}
+
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"PayMongo API error: {str(e)}")
+
+
+@router.post("/paymongo-webhook")
+async def paymongo_webhook(request: Request, db: Session = Depends(get_db)):
+    """Handle PayMongo payment success webhooks."""
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid request body")
+
+    event_type = payload.get("data", {}).get("type")
+
+    if event_type == "payment.success":
+        payment_data = payload.get("data", {}).get("attributes", {})
+        metadata = payment_data.get("metadata", {})
+
+        user_id = metadata.get("user_id")
+        plan = metadata.get("plan", "pro")
+
+        if user_id:
+            user = db.query(User).filter(User.id == user_id).first()
+            if user:
+                user.plan = plan
+                user.paymongo_customer_id = payment_data.get("source", {}).get("id")
+                db.commit()
+                return {"status": "ok"}
+
+    return {"status": "ok"}
+
+
+@router.get("/paymongo-public-key")
+def get_paymongo_public_key():
+    """Get PayMongo public key for frontend integration."""
+    try:
+        paymongo = get_paymongo()
+        return {"public_key": paymongo["public_key"]}
+    except HTTPException:
+        return {"public_key": None}

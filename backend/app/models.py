@@ -34,6 +34,8 @@ class User(Base):
     plan = Column(String, default="free")  # free, basic, pro
     stripe_customer_id = Column(String, nullable=True)
     stripe_subscription_id = Column(String, nullable=True)
+    paymongo_customer_id = Column(String, nullable=True)
+    paymongo_source_id = Column(String, nullable=True)
     scans_this_month = Column(Integer, default=0)
     scan_reset_date = Column(DateTime, nullable=True)
 

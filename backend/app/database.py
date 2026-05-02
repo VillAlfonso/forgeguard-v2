@@ -44,6 +44,10 @@ def _ensure_columns():
                 conn.execute(text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT 0"))
             if "google_id" not in user_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN google_id VARCHAR"))
+            if "paymongo_customer_id" not in user_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN paymongo_customer_id VARCHAR"))
+            if "paymongo_source_id" not in user_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN paymongo_source_id VARCHAR"))
 
             # Plan rename migration: legacy 'basic' -> new 'pro' ($5 unlimited);
             # legacy 'pro' (1000-scan tier) -> new 'premium' ($10 unlimited + AI).

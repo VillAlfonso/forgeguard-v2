@@ -9,6 +9,7 @@ export default function Account() {
   const [form, setForm] = useState({ full_name: '', username: '' });
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('stripe');
 
   useEffect(() => {
     api.getPlans().then(data => setPlans(data.plans)).catch(() => {});
@@ -43,7 +44,7 @@ export default function Account() {
 
   async function handleUpgrade(planId) {
     try {
-      const data = await api.createCheckout(planId);
+      const data = await api.createCheckout(planId, paymentMethod);
       if (data.checkout_url) {
         window.location.href = data.checkout_url;
       }
@@ -161,6 +162,42 @@ export default function Account() {
             letterSpacing: 2, marginTop: 14, padding: 0,
           }}>Cancel Subscription</button>
         )}
+      </div>
+
+      {/* Payment Method Selection */}
+      <div className="card" style={{ marginBottom: 24 }}>
+        <h2 className="oswald" style={{ fontSize: 14, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 14 }}>Payment Method</h2>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button
+            onClick={() => setPaymentMethod('stripe')}
+            style={{
+              flex: 1, padding: '12px 14px', borderRadius: 3, cursor: 'pointer',
+              border: paymentMethod === 'stripe' ? '2px solid #00ff66' : '1px solid #1d3825',
+              background: paymentMethod === 'stripe' ? 'rgba(0,255,102,0.08)' : 'transparent',
+              color: paymentMethod === 'stripe' ? '#00ff66' : '#86efac',
+              fontFamily: "'Oswald', sans-serif", textTransform: 'uppercase', fontSize: 12, letterSpacing: 1,
+              transition: 'all 0.2s',
+            }}
+          >
+            💳 Stripe (Global)
+          </button>
+          <button
+            onClick={() => setPaymentMethod('paymongo')}
+            style={{
+              flex: 1, padding: '12px 14px', borderRadius: 3, cursor: 'pointer',
+              border: paymentMethod === 'paymongo' ? '2px solid #00ff66' : '1px solid #1d3825',
+              background: paymentMethod === 'paymongo' ? 'rgba(0,255,102,0.08)' : 'transparent',
+              color: paymentMethod === 'paymongo' ? '#00ff66' : '#86efac',
+              fontFamily: "'Oswald', sans-serif", textTransform: 'uppercase', fontSize: 12, letterSpacing: 1,
+              transition: 'all 0.2s',
+            }}
+          >
+            🇵🇭 PayMongo (PH)
+          </button>
+        </div>
+        <p style={{ fontSize: 12, color: '#3f6e4a', marginTop: 10, fontFamily: "'JetBrains Mono', monospace" }}>
+          {paymentMethod === 'paymongo' ? 'Pay with cards, GCash, or other e-wallets' : 'Pay with Visa, Mastercard, and more'}
+        </p>
       </div>
 
       {/* Plans */}
