@@ -217,7 +217,7 @@ def promote_to_super_admin(
 class GenerateCodeRequest(BaseModel):
     plan: str  # free, pro, premium
     code: str  # custom code, e.g., "CLASS-2024-FALL"
-    max_uses: Optional[int] = None
+    max_uses: int  # required: max number of uses
     expires_in_days: Optional[int] = None
 
 
