@@ -2,6 +2,58 @@
 
 **Status:** TODO — Add detailed analysis before final submission
 
+## Fine-Tuning LLaVA for Forensic Classification
+
+### Would Fine-Tuned LLaVA Beat Claude?
+- **Claude** is smarter overall (better reasoning, fewer hallucinations, general-purpose)
+- **Fine-tuned LLaVA** is more specialized (trained specifically on forensic documents)
+- For your use case: **Fine-tuned LLaVA could outperform Claude** on forgery detection
+- Trade-off: Claude wins on general reasoning; LLaVA wins on domain-specific accuracy
+- **Bottom line:** Yes, fine-tuning is worth doing if you have labeled data
+
+### LLaVA vs YOLO for Forgery Detection
+| Aspect | YOLO | LLaVA |
+|---|---|---|
+| **Task** | Object detection (bounding boxes) | Vision-language understanding |
+| **Output** | Box coordinates + class | Classification + explanation + localization |
+| **Appropriate for forgery?** | ❌ No (detects objects, not forgery patterns) | ✅ Yes (understands document context) |
+| **Fine-tunable** | ❌ Requires labeled bounding boxes | ✅ Requires labeled images + text descriptions |
+| **Explainability** | Low (just boxes) | High (explains why it's a forgery) |
+| **Verdict** | LLaVA is the right tool for this project |
+
+### LLaVA Model Sizes & Hosting Limits
+
+**Available Models:**
+
+| Model | Parameters | Quantized (4-bit) | HF Spaces T4 GPU | Training Data Needed |
+|---|---|---|---|---|
+| **LLaVA-1.5 7B** | 7 billion | ~4GB | ✅ Fits fine | 100-500/category |
+| **LLaVA-1.5 13B** | 13 billion | ~8-10GB | ⚠️ Tight (15-20s inference) | 200-1000/category |
+| **Qwen-VL** | 10 billion | ~6GB | ✅ Good fit | 100-500/category |
+| **LLaVA-NeXT 7B** | 7 billion | ~4GB | ✅ Fits fine | 100-500/category |
+
+**Recommendation for capstone:** **LLaVA-1.5 7B** or **Qwen-VL**
+- Comfortably fits HF Spaces T4 free GPU (16GB VRAM)
+- Fast inference (~5-10s per image)
+- Good accuracy with moderate fine-tuning data
+
+### Training Data Requirements
+- **Minimum viable:** 100-200 labeled images per forgery category (~1600-3200 total)
+- **Good:** 500+ per category (~8000 total)
+- **Excellent:** 1000+ per category (~16000 total)
+- More data = better accuracy + less overfitting
+- Each image needs: photo + text description of forgery type, visual cues, and evidence
+
+### Other Vision-Language Model Options
+| Model | Strengths | Trade-offs |
+|---|---|---|
+| **Qwen-VL** (10B) | Excellent document understanding, ~6GB quantized | Chinese-origin (no political issues, but check org) |
+| **LLaVA-NeXT** (13B) | Newer than 1.5, better reasoning | Larger (tight fit on T4) |
+| **CLIP** | Fast, tiny models available | Only classification, no text explanation |
+| **Claude 3.5 Sonnet** | Best reasoning, most expensive | $15/1M input tokens (not free) |
+
+---
+
 ## 1. Alternatives for Each Component
 
 ### Classification & Localization Layer
