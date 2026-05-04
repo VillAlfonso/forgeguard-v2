@@ -1,6 +1,207 @@
 # Revelator — System Architecture & Design Decisions
 
-**Status:** TODO — Add detailed analysis before final submission
+**Status:** In progress — documenting architectural journey and final decisions
+
+## Architectural Evolution & Decision-Making Journey
+
+### Phase 1: Initial Implementation (FastAPI + SQLite)
+
+**What was built:**
+- **Backend**: FastAPI (Python) running on local machine
+- **Database**: SQLite for all data (users, scans, history, promo codes)
+- **Frontend**: React web app
+- **Image storage**: Local file system (`uploads/` directory)
+- **Authentication**: JWT tokens + OAuth (Google)
+- **Payments**: Stripe + PayMongo integration (test keys)
+- **LLM**: Gemini Vision API (free tier)
+- **Admin panel**: Custom FastAPI endpoints + React dashboard
+
+**Why this approach:**
+- FastAPI is powerful and flexible
+- SQLite is simple for local development
+- Full control over everything
+- Learning SaaS development (auth, payments, subscriptions)
+
+**Current state (commit `3981a71`):**
+```
+┌─────────────┐
+│   React     │
+└──────┬──────┘
+       │
+    ┌──▼──────────────────┐
+    │   FastAPI Backend   │
+    │ • Auth (OAuth)      │
+    │ • Subscriptions     │
+    │ • Payments          │
+    │ • Admin             │
+    │ • Rate limits       │
+    └──┬──────────────────┘
+       │
+    ┌──▼──┐    ┌────────┐    ┌──────────┐
+    │SQLite   Gemini    Local FS
+    └──────┘    └────────┘    └──────────┘
+```
+
+### Phase 2: Exploration & Questions (Current)
+
+**Discovery: Do we actually need all this complexity?**
+
+Realized that for a capstone + mobile app:
+1. **Firebase can replace SQLite** (Firestore document DB)
+2. **Firebase Storage can replace local file system** (cloud storage)
+3. **Firebase Auth can replace custom JWT** (but OAuth still works)
+4. **Stripe SDK can replace backend payment handler** (webhooks via Cloud Functions)
+5. **Firebase Console can replace custom admin panel**
+
+**Key realizations:**
+- FastAPI is powerful, but adds complexity for a capstone
+- Gemini Vision works well, but fine-tuned LLaVA could be better (custom model)
+- SQLite works locally, but Firebase scales automatically
+- Local file storage works for demo, but Firebase Storage is more robust
+
+**Questions raised:**
+- Do we need a backend at all?
+- Can Firebase handle everything?
+- Is FastAPI overkill for a capstone?
+- Should we focus on learning (keep backend) or shipping (use Firebase)?
+
+### Phase 3: Architectural Options (Current Decision Point)
+
+**Three viable paths emerged:**
+
+**Option A: Simplify to Firebase (No backend)**
+```
+Web: React → Firebase (auth + Firestore + Storage) → Stripe SDK → HF Spaces
+Mobile: React Native → Firebase → Stripe SDK → HF Spaces
+Cost: $0 | Complexity: Low | Backend learning: None
+```
+- Fastest to ship
+- Least complexity
+- No server management
+- No backend experience
+
+**Option B: Keep FastAPI + Add Firebase (Hybrid)**
+```
+Web: React → FastAPI (local) → Stripe/PayMongo → HF Spaces
+    ├─ Auth (JWT + OAuth)
+    ├─ Subscriptions
+    ├─ Admin panel
+    └─ SQLite (local)
+Mobile: React Native → Firebase → Stripe SDK → HF Spaces
+Cost: $0 (demo) | Complexity: Medium | Backend learning: Full SaaS stack
+```
+- Learn SaaS development
+- Keep existing FastAPI work
+- Show both architectures
+- More complex but educational
+
+**Option C: Full Firebase everywhere (Serverless)**
+```
+Web: React → Firebase (everything)
+Mobile: React Native → Firebase (everything)
+Cost: $0 | Complexity: Low | Backend learning: None
+```
+- Cleanest architecture
+- True serverless
+- No custom code for auth/payments
+- Scales automatically
+
+**Decision:** Exploring **hybrid approach** (Option B) for capstone because:
+- Shows understanding of both traditional and serverless architectures
+- Leverages existing FastAPI work (don't waste it)
+- Learn real SaaS backend development
+- Still maintain free costs (run locally)
+- Strong portfolio piece
+
+---
+
+## Evolution of Infrastructure Decisions
+
+### LLM Classification: Gemini → Fine-tuned LLaVA
+
+**Why Gemini initially:**
+- Free tier available (1,500 requests/day)
+- Works immediately (no training)
+- Multimodal (understands images)
+- Good accuracy out-of-box
+
+**Issues discovered:**
+- Can't be fine-tuned (black box)
+- Misses subtle forgeries in specific documents
+- User data goes to Google servers
+- Limited customization
+
+**Why switching to LLaVA:**
+- Open-source, can be fine-tuned on YOUR data
+- Better accuracy after training on forensic documents
+- Runs on your infrastructure (HF Spaces)
+- Learn model training (Colab)
+- Potentially better than Gemini after fine-tuning
+
+**Model choice: LLaVA-NeXT 7B**
+- Newer than LLaVA-1.5
+- Same size, better quality
+- Fits HF Spaces T4 GPU (free)
+- Inference ~5-10s
+
+### Database: SQLite → Considering Firestore
+
+**Why SQLite initially:**
+- Built-in, no setup
+- Perfect for local development
+- Works with FastAPI
+- Simple migrations
+
+**Issues discovered:**
+- Tied to FastAPI (can't use with Firebase mobile app)
+- No automatic scaling
+- No built-in auth rules
+- Manual backup/recovery
+
+**Why considering Firestore:**
+- Real-time updates
+- Built-in access control
+- Automatic scaling
+- Free tier generous
+- Works from frontend directly (mobile)
+- No backend needed for basic CRUD
+
+### Image Storage: Local filesystem → Firebase Storage
+
+**Why local filesystem initially:**
+- Simplest to implement
+- Works with FastAPI
+- Full control over files
+
+**Issues discovered:**
+- Requires server to be running
+- Manual backup needed
+- No CDN/caching
+- Scales poorly
+
+**Why Firebase Storage:**
+- Global CDN
+- Automatic backups
+- Free tier: 1GB
+- Works from mobile directly
+- Integrated with Firestore
+
+---
+
+## Summary of Decisions Made
+
+| Aspect | Phase 1 (Built) | Phase 2 (Exploring) | Decision |
+|---|---|---|---|
+| **Backend** | FastAPI | Firebase alternative | Keep FastAPI for web (learning) |
+| **Database** | SQLite | Firestore | Keep SQLite for web; Firebase for mobile |
+| **Image storage** | Local FS | Firebase Storage | Firebase Storage for both |
+| **Auth** | JWT + OAuth | Firebase Auth | Keep JWT for web; Firebase for mobile |
+| **LLM** | Gemini Vision | Fine-tuned LLaVA | Switch to LLaVA-NeXT 7B |
+| **Inference hosting** | Gemini API | HF Spaces | Use HF Spaces (free GPU) |
+| **Payments** | Stripe + PayMongo | Stripe SDK | Keep Stripe/PayMongo in FastAPI |
+| **Mobile backend** | FastAPI | Firebase | Use Firebase (no backend needed) |
+
+**Final architecture:** Hybrid (Option B) — FastAPI for web + Firebase for mobile + fine-tuned LLaVA on HF Spaces
 
 ## Fine-Tuning LLaVA for Forensic Classification
 
