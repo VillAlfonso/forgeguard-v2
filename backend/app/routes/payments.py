@@ -119,7 +119,7 @@ def create_checkout(
         payment_method_types=["card"],
         line_items=[{"price": price_id, "quantity": 1}],
         mode="subscription",
-        success_url=f"{FRONTEND_URL}/account?payment=success",
+        success_url=f"{FRONTEND_URL}/account?payment=success&session_id={{CHECKOUT_SESSION_ID}}&provider=stripe",
         cancel_url=f"{FRONTEND_URL}/account?payment=cancelled",
         metadata={"user_id": current_user.id, "plan": body.plan},
     )
@@ -161,6 +161,67 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             db.commit()
 
     return {"status": "ok"}
+
+
+@router.get("/verify-session")
+def verify_session(
+    session_id: str = None,
+    provider: str = "stripe",
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Verify payment on success redirect and update user plan — no webhook needed."""
+    if provider == "stripe":
+        stripe = get_stripe()
+        if not session_id:
+            raise HTTPException(status_code=400, detail="session_id required for Stripe verification")
+        try:
+            session = stripe.checkout.Session.retrieve(session_id)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Could not retrieve session: {e}")
+
+        if session.payment_status != "paid":
+            raise HTTPException(status_code=400, detail="Payment not completed")
+
+        if session.metadata.get("user_id") != current_user.id:
+            raise HTTPException(status_code=403, detail="Session does not belong to this user")
+
+        plan = session.metadata.get("plan", "pro")
+        current_user.plan = plan
+        if session.subscription:
+            current_user.stripe_subscription_id = session.subscription
+        db.commit()
+        return {"status": "ok", "plan": plan}
+
+    elif provider == "paymongo":
+        paymongo = get_paymongo()
+        pm_session_id = session_id or current_user.paymongo_source_id
+        if not pm_session_id:
+            raise HTTPException(status_code=400, detail="No PayMongo session found")
+
+        auth_string = base64.b64encode(f"{paymongo['secret_key']}:".encode()).decode()
+        try:
+            response = requests.get(
+                f"https://api.paymongo.com/v1/checkout_sessions/{pm_session_id}",
+                headers={"Authorization": f"Basic {auth_string}"},
+                timeout=10,
+            )
+            response.raise_for_status()
+            data = response.json()
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"PayMongo API error: {e}")
+
+        attrs = data.get("data", {}).get("attributes", {})
+        status = attrs.get("payment_intent", {}).get("attributes", {}).get("status")
+        if status != "succeeded":
+            raise HTTPException(status_code=400, detail="Payment not completed")
+
+        plan = attrs.get("metadata", {}).get("plan", "pro")
+        current_user.plan = plan
+        db.commit()
+        return {"status": "ok", "plan": plan}
+
+    raise HTTPException(status_code=400, detail="Invalid provider")
 
 
 @router.post("/cancel")

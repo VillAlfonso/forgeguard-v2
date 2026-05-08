@@ -17,13 +17,22 @@ export default function Account() {
     if (user) setForm({ full_name: user.full_name || '', username: user.username || '' });
   }, [user]);
 
-  // Check for payment redirect
+  // Verify payment on success redirect
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('payment') === 'success') {
-      setMsg('Payment successful! Your plan will update shortly.');
-      refreshUser();
+      const sessionId = params.get('session_id');
+      const provider = params.get('provider') || 'stripe';
       window.history.replaceState({}, '', '/account');
+      api.verifySession(sessionId, provider)
+        .then(data => {
+          setMsg(`Payment successful! You are now on the ${data.plan} plan.`);
+          refreshUser();
+        })
+        .catch(() => {
+          setMsg('Payment received! Your plan may take a moment to update.');
+          refreshUser();
+        });
     } else if (params.get('payment') === 'cancelled') {
       setError('Payment was cancelled.');
       window.history.replaceState({}, '', '/account');

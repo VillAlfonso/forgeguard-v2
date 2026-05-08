@@ -191,6 +191,12 @@ export const api = {
     return request('/payments/paymongo-public-key', { noAuth: true });
   },
 
+  verifySession(sessionId, provider = 'stripe') {
+    const params = new URLSearchParams({ provider });
+    if (sessionId) params.set('session_id', sessionId);
+    return request(`/payments/verify-session?${params.toString()}`);
+  },
+
   cancelSubscription() {
     return request('/payments/cancel', { method: 'POST' });
   },
