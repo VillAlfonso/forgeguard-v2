@@ -261,15 +261,18 @@ export default function Scan() {
               textTransform: 'uppercase', fontSize: 12,
             }}
           >
-            <span>＋ Additional Context (Optional)</span>
+            <span>
+              ＋ Additional Context
+              <span style={{ fontSize: 10, color: '#ffa040', marginLeft: 8, letterSpacing: 1 }}>RECOMMENDED</span>
+            </span>
             <span style={{ fontSize: 10, color: '#3f6e4a', letterSpacing: 1 }}>
               {showExtras ? '▲ HIDE' : '▼ EXPAND'}
             </span>
           </button>
           {showExtras && (
             <div style={{ padding: '0 16px 16px', display: 'grid', gap: 14 }}>
-              <p style={{ fontSize: 12, color: '#3f6e4a', margin: 0, fontStyle: 'italic' }}>
-                Skip any field — the model works without these. Filling them in helps focus the analysis.
+              <p style={{ fontSize: 12, color: '#86efac', margin: 0 }}>
+                Filling in context significantly improves accuracy — especially document type, suspected forgery, and any physical clues you noticed. All fields are optional but the more you provide, the fewer alternative hypotheses the model will need to hedge on.
               </p>
 
               <div>
@@ -646,6 +649,34 @@ function ForensicResultCard({ result, canvasRef, verdictColors, documentTypeLabe
                     {result.reasoning_steps.map((s, i) => <li key={i}>{s}</li>)}
                   </ol>
                 </details>
+              )}
+
+              {/* Alternative hypotheses */}
+              {result.alternatives?.length > 0 && (
+                <div style={{
+                  marginTop: 12, borderTop: '1px solid #1d3825', paddingTop: 10,
+                }}>
+                  <p className="mono" style={{ fontSize: 9, letterSpacing: 2, color: '#ffa040', margin: '0 0 8px' }}>
+                    ⚠ ALTERNATIVE {result.alternatives.length > 1 ? `HYPOTHESES (${result.alternatives.length})` : 'HYPOTHESIS'}
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {result.alternatives.map((alt, i) => (
+                      <div key={i} style={{
+                        background: 'rgba(255,160,64,0.04)', borderRadius: 2, padding: '8px 12px',
+                        border: '1px solid rgba(255,160,64,0.2)',
+                      }}>
+                        <p style={{ fontSize: 13, color: '#ffc888', margin: 0, lineHeight: 1.6 }}>
+                          <strong style={{ color: '#ffd680', fontFamily: "'Oswald', sans-serif", textTransform: 'uppercase', letterSpacing: 1, fontSize: 11 }}>
+                            {alt.category_label}
+                          </strong>
+                          {alt.reasoning && (
+                            <span style={{ color: '#c4a45a' }}> — {alt.reasoning}</span>
+                          )}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
           </div>

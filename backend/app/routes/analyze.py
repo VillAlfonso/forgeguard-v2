@@ -287,6 +287,7 @@ def analyze_document(
         "certainty_level": gemini.get("certainty_level"),
         "reasoning_steps": gemini.get("reasoning_steps", []),
         "anomaly_location": gemini.get("anomaly_location"),
+        "alternatives": gemini.get("alternatives", []),
         "model_tier_requested": tier,
         "model_tier_used": tier_used,
         "model_tier_fallback": tier != tier_used,
