@@ -25,7 +25,7 @@ from ..config import (
 from ..forgery.llm import get_llm_explanation
 from ..forgery.document_gate import check_is_document
 from ..forgery.gemini_vision import (
-    classify as gemini_classify, CATEGORY_CODES, CATEGORY_LABELS, analyze_prompts,
+    classify as gemini_classify, CATEGORY_CODES, CATEGORY_LABELS,
     preprocess_image, triage_classify, confidence_gated_analyze,
 )
 from ..forgery.document_types import get_document_types_response, DOCUMENT_TYPES
@@ -99,32 +99,6 @@ def get_document_types():
 def get_model_tiers(current_user: User = Depends(get_current_user)):
     return get_tiers_response(user_plan=current_user.plan)
 
-
-@router.get("/about")
-def get_about_info():
-    return {
-        "verdict_meaning": {
-            "forged":               "High-confidence indicators matching known forgery patterns. Manual review still recommended.",
-            "suspicious":           "Anomalies present but below the strong-evidence threshold. Treat as inconclusive.",
-            "no_forgery_detected":  "No forgery signals detected above threshold. Absence of evidence is not proof of authenticity.",
-            "not_a_document":       "The upload doesn't appear to be a document. Skipped without scoring.",
-        },
-        "limitations": [
-            "Gemini Vision is a general-purpose model — subtle, domain-specific forgeries may be missed.",
-            "Lighting, camera angle, focus, and resolution materially affect results.",
-            "Revelator is a screening tool. Findings are not by themselves admissible forensic evidence.",
-        ],
-        "model_tiers": list(TIER_META.values()),
-    }
-
-
-@router.get("/prompt-analysis")
-def get_prompt_analysis():
-    """
-    Live analysis of the Gemini prompts. Parses gemini_vision.py on each request
-    so the dashboard always reflects the current prompt state.
-    """
-    return analyze_prompts()
 
 
 @router.post("/analyze")

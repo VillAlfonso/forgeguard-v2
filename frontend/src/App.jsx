@@ -11,7 +11,6 @@ import SampleGallery from './pages/SampleGallery';
 import History from './pages/History';
 import Account from './pages/Account';
 import Admin from './pages/Admin';
-import About from './pages/About';
 import Logo from './components/Logo';
 
 // ── Auth Context ────────────────────────────────────
@@ -195,7 +194,6 @@ function Layout({ children }) {
     { path: '/scan', label: 'Scan', icon: '⌖' },
     { path: '/history', label: 'History', icon: '▤' },
     { path: '/account', label: 'Account', icon: '◉' },
-    { path: '/about', label: 'About', icon: '◈' },
     ...(["admin","superadmin"].includes(user?.role) ? [{ path: '/admin', label: 'Admin', icon: '★' }] : []),
   ];
 
@@ -459,7 +457,6 @@ export default function App() {
               <Route path="/" element={<Navigate to="/scan" replace />} />
               <Route path="/scan" element={<ProtectedRoute><Scan /></ProtectedRoute>} />
               <Route path="/samples/:categoryId" element={<ProtectedRoute><SampleGallery /></ProtectedRoute>} />
-              <Route path="/about" element={<About />} />
               <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
               <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
               <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />

@@ -123,14 +123,6 @@ export const api = {
     return request('/categories');
   },
 
-  getAbout() {
-    return request('/about', { noAuth: true });
-  },
-
-  getPromptAnalysis() {
-    return request('/prompt-analysis', { noAuth: true });
-  },
-
   analyze(file, category, documentType, modelTier, extras = {}) {
     const form = new FormData();
     form.append('imageFile', file);
