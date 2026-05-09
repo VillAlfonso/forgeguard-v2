@@ -15,6 +15,11 @@ const config: CapacitorConfig = {
     cleartext: true,
   },
   plugins: {
+    GoogleAuth: {
+      scopes: ['profile', 'email'],
+      serverClientId: '412368654322-55pcnvummc3fup2vgr13f6nctjqvkpll.apps.googleusercontent.com',
+      forceCodeForRefreshToken: true,
+    },
     Camera: {
       permissions: ['camera', 'photos'],
     },
