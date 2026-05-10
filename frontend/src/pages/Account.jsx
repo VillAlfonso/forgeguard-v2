@@ -202,6 +202,20 @@ export default function Account() {
           Each Google account gives you 1,500 free scans per day. Add keys from different accounts as backups — activate the one you want to use, the rest stay saved but inactive.
         </p>
 
+        <a
+          href="https://aistudio.google.com/api-keys"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'inline-block', padding: '10px 16px', marginBottom: 20,
+            background: 'rgba(0,255,102,0.1)', border: '1px solid #00ff66', borderRadius: 3,
+            color: '#00ff66', textDecoration: 'none', fontSize: 12,
+            fontFamily: "'Oswald', sans-serif", textTransform: 'uppercase', letterSpacing: 1,
+          }}
+        >
+          → Open Google AI Studio
+        </a>
+
         {/* How to get a key — collapsible tutorial */}
         <details style={{
           background: 'rgba(0,255,102,0.04)', border: '1px solid rgba(0,255,102,0.15)',
@@ -249,20 +263,6 @@ export default function Account() {
             ))}
           </div>
         </details>
-
-        <a
-          href="https://aistudio.google.com/api-keys"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            display: 'inline-block', padding: '10px 16px', marginBottom: 20,
-            background: 'rgba(0,255,102,0.1)', border: '1px solid #00ff66', borderRadius: 3,
-            color: '#00ff66', textDecoration: 'none', fontSize: 12,
-            fontFamily: "'Oswald', sans-serif", textTransform: 'uppercase', letterSpacing: 1,
-          }}
-        >
-          → Open Google AI Studio
-        </a>
 
         {keyMsg && (
           <div style={{
