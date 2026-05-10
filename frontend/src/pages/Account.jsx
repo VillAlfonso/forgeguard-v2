@@ -136,11 +136,48 @@ export default function Account() {
       <div className="card" style={{ marginBottom: 24 }}>
         <h2 className="oswald" style={{ fontSize: 14, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 14 }}>Gemini API Key</h2>
         <p style={{ fontSize: 12, color: '#86efac', marginBottom: 12 }}>
-          Use your own free-tier Google Gemini API key for unlimited scans. Get your key at{' '}
-          <a href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener noreferrer" style={{
-            color: '#00ff66', textDecoration: 'underline', cursor: 'pointer'
-          }}>aistudio.google.com/api-keys</a>
+          Use your own free-tier Google Gemini API key for unlimited scans.
         </p>
+
+        {/* Step-by-step tutorial */}
+        <div style={{
+          background: 'rgba(0,255,102,0.05)', border: '1px solid rgba(0,255,102,0.2)',
+          borderRadius: 3, padding: 12, marginBottom: 14
+        }}>
+          <div style={{ fontSize: 11, color: '#6dba85', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10, fontWeight: 600 }}>
+            ⚡ Quick Setup (3 steps)
+          </div>
+          <div style={{ display: 'grid', gap: 10 }}>
+            <div style={{ fontSize: 12, color: '#d8ffe6', lineHeight: 1.5 }}>
+              <span style={{ color: '#00ff66', fontWeight: 600 }}>1. Get your key:</span> Click the link below to open Google AI Studio and copy your API key
+            </div>
+            <div style={{ fontSize: 12, color: '#d8ffe6', lineHeight: 1.5 }}>
+              <span style={{ color: '#00ff66', fontWeight: 600 }}>2. Come back:</span> Return to this app
+            </div>
+            <div style={{ fontSize: 12, color: '#d8ffe6', lineHeight: 1.5 }}>
+              <span style={{ color: '#00ff66', fontWeight: 600 }}>3. Paste & save:</span> Paste your key below and you're done!
+            </div>
+          </div>
+        </div>
+
+        <a href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener noreferrer" style={{
+          display: 'inline-block',
+          padding: '10px 16px',
+          background: 'rgba(0,255,102,0.1)',
+          border: '1px solid #00ff66',
+          borderRadius: 3,
+          color: '#00ff66',
+          textDecoration: 'none',
+          fontSize: 12,
+          fontFamily: "'Oswald', sans-serif",
+          textTransform: 'uppercase',
+          letterSpacing: 1,
+          marginBottom: 14,
+          cursor: 'pointer',
+          transition: 'all 0.2s'
+        }}>
+          → Open Google AI Studio
+        </a>
         {apiKeyMsg && (
           <div style={{
             background: 'rgba(0,255,102,0.1)', border: '1px solid #00ff66', padding: 10, borderRadius: 2,
