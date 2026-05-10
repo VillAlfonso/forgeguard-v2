@@ -1,5 +1,4 @@
-# ForgeGuard Backend Requirements
-# Floor-pinned (>=) so Python 3.13 picks compatible wheels.
+# Revelator Backend Requirements
 
 # Core API
 fastapi>=0.115
@@ -19,17 +18,12 @@ google-auth>=2.30
 # Image Processing
 Pillow>=11.0
 
-# AI/ML
-ultralytics>=8.3.0
-
-# LLM Options
+# AI / Vision
 groq>=0.11
 google-genai>=1.0
-requests>=2.32  # Used for PayMongo API calls
 
-# Payments (optional - install when ready)
+# HTTP (PayMongo, Ollama)
+requests>=2.32
+
+# Payments
 stripe>=10.0
-
-# Development
-pytest>=8.0
-httpx>=0.27
