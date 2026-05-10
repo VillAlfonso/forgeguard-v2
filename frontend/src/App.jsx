@@ -111,10 +111,19 @@ function Layout({ children }) {
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerOffset, setDrawerOffset] = useState(0); // for swipe-drag visual feedback
+  const [quotaExhausted, setQuotaExhausted] = useState(() => localStorage.getItem('fg_quota_exhausted') === 'true');
   const touchStartX = React.useRef(null);
   const touchStartY = React.useRef(null);
   const isDragging = React.useRef(false);
   const DRAWER_WIDTH = 280;
+
+  // Clear quota exhausted flag when entering Account page
+  React.useEffect(() => {
+    if (location.pathname === '/account') {
+      setQuotaExhausted(false);
+      localStorage.removeItem('fg_quota_exhausted');
+    }
+  }, [location.pathname]);
 
   useEffect(() => { setDrawerOpen(false); }, [location.pathname]);
 
@@ -259,19 +268,28 @@ function Layout({ children }) {
           {/* Desktop nav — only on wide screens */}
           {user && (
             <nav className="nav-desktop" style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+              <style>{`
+                @keyframes flicker-glow {
+                  0%, 100% { box-shadow: 0 0 8px rgba(0,255,102,0.8), 0 0 16px rgba(0,255,102,0.6); }
+                  50% { box-shadow: 0 0 4px rgba(0,255,102,0.3), 0 0 8px rgba(0,255,102,0.2); }
+                }
+              `}</style>
               {navItems.map(item => {
                 const active = location.pathname === item.path;
+                const isAccount = item.path === '/account';
+                const shouldFlicker = quotaExhausted && isAccount;
                 return (
                   <Link key={item.path} to={item.path} style={{
                     padding: '10px 14px', fontSize: 13,
                     fontFamily: "'Oswald', sans-serif",
                     textTransform: 'uppercase', letterSpacing: 1.5,
-                    color: active ? '#00ff66' : '#6dba85',
+                    color: active ? '#00ff66' : shouldFlicker ? '#00ff66' : '#6dba85',
                     textDecoration: 'none',
-                    borderBottom: active ? '2px solid #00ff66' : '2px solid transparent',
-                    textShadow: active ? '0 0 12px rgba(0,255,102,0.55)' : 'none',
+                    borderBottom: active ? '2px solid #00ff66' : shouldFlicker ? '2px solid #00ff66' : '2px solid transparent',
+                    textShadow: active ? '0 0 12px rgba(0,255,102,0.55)' : shouldFlicker ? '0 0 8px rgba(0,255,102,0.8)' : 'none',
                     whiteSpace: 'nowrap',
                     transition: 'color 0.15s, text-shadow 0.15s',
+                    animation: shouldFlicker ? 'flicker-glow 1s ease-in-out infinite' : 'none',
                   }}>
                     {item.label}
                   </Link>
@@ -367,8 +385,16 @@ function Layout({ children }) {
 
           {/* Drawer nav links */}
           <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
+            <style>{`
+              @keyframes flicker-glow-drawer {
+                0%, 100% { box-shadow: inset 0 0 8px rgba(0,255,102,0.4); }
+                50% { box-shadow: inset 0 0 4px rgba(0,255,102,0.1); }
+              }
+            `}</style>
             {navItems.map(item => {
               const active = location.pathname === item.path;
+              const isAccount = item.path === '/account';
+              const shouldFlicker = quotaExhausted && isAccount;
               return (
                 <Link
                   key={item.path}
@@ -379,16 +405,17 @@ function Layout({ children }) {
                     fontSize: 15,
                     fontFamily: "'Oswald', sans-serif",
                     textTransform: 'uppercase', letterSpacing: 2,
-                    color: active ? '#00ff66' : '#86efac',
+                    color: active ? '#00ff66' : shouldFlicker ? '#00ff66' : '#86efac',
                     textDecoration: 'none',
-                    borderLeft: active ? '3px solid #00ff66' : '3px solid transparent',
-                    background: active ? 'rgba(0,255,102,0.06)' : 'transparent',
-                    textShadow: active ? '0 0 10px rgba(0,255,102,0.5)' : 'none',
+                    borderLeft: active ? '3px solid #00ff66' : shouldFlicker ? '3px solid #00ff66' : '3px solid transparent',
+                    background: active ? 'rgba(0,255,102,0.06)' : shouldFlicker ? 'rgba(0,255,102,0.04)' : 'transparent',
+                    textShadow: active ? '0 0 10px rgba(0,255,102,0.5)' : shouldFlicker ? '0 0 8px rgba(0,255,102,0.6)' : 'none',
                     minHeight: 48,
+                    animation: shouldFlicker ? 'flicker-glow-drawer 1s ease-in-out infinite' : 'none',
                   }}
                 >
                   <span className="mono" style={{
-                    fontSize: 16, color: active ? '#00ff66' : '#3f6e4a', width: 20, textAlign: 'center',
+                    fontSize: 16, color: active ? '#00ff66' : shouldFlicker ? '#00ff66' : '#3f6e4a', width: 20, textAlign: 'center',
                   }}>
                     {item.icon}
                   </span>

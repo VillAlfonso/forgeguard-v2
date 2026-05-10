@@ -13,10 +13,19 @@ export default function Account() {
   const [newKeyValue, setNewKeyValue] = useState('');
   const [keyError, setKeyError] = useState('');
   const [keyMsg, setKeyMsg] = useState('');
+  const [highlightKeyInput, setHighlightKeyInput] = useState(() => localStorage.getItem('fg_highlight_key_input') === 'true');
 
   useEffect(() => {
     if (user) setForm({ full_name: user.full_name || '', username: user.username || '' });
   }, [user]);
+
+  useEffect(() => {
+    if (highlightKeyInput) {
+      localStorage.removeItem('fg_highlight_key_input');
+      const timer = setTimeout(() => setHighlightKeyInput(false), 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightKeyInput]);
 
   const loadKeys = useCallback(async () => {
     try {
@@ -147,7 +156,9 @@ export default function Account() {
         {/* How to get a key */}
         <div style={{
           background: 'rgba(0,255,102,0.04)', border: '1px solid rgba(0,255,102,0.15)',
-          borderRadius: 3, padding: 12, marginBottom: 16
+          borderRadius: 3, padding: 12, marginBottom: 16,
+          boxShadow: highlightKeyInput ? '0 0 12px rgba(0,255,102,0.6), inset 0 0 8px rgba(0,255,102,0.2)' : 'none',
+          transition: 'box-shadow 0.3s',
         }}>
           <div style={{ fontSize: 11, color: '#6dba85', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
             ⚡ How to get a key
@@ -290,7 +301,12 @@ export default function Account() {
               value={newKeyValue}
               onChange={e => setNewKeyValue(e.target.value)}
               type="password"
-              style={{ flex: 1 }}
+              style={{
+                flex: 1,
+                boxShadow: highlightKeyInput ? '0 0 8px rgba(0,255,102,0.5), inset 0 0 6px rgba(0,255,102,0.15)' : 'none',
+                transition: 'box-shadow 0.3s',
+              }}
+              autoFocus={highlightKeyInput}
             />
             <button
               className="btn btn-primary"

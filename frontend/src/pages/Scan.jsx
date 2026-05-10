@@ -134,6 +134,7 @@ export default function Scan() {
     } catch (err) {
       if (err.message === 'quota_exhausted') {
         setQuotaExhausted(true);
+        localStorage.setItem('fg_quota_exhausted', 'true');
       } else {
         setError(err.message);
       }
@@ -504,18 +505,27 @@ export default function Scan() {
               Your current API key has used up its free daily quota (1,500 requests/day).
               It will <strong style={{ color: '#ffa040' }}>reset automatically in ~24 hours</strong>.
             </p>
-            <p style={{ fontSize: 12, color: '#d8ffe6', lineHeight: 1.7, margin: '0 0 14px 0' }}>
-              <strong style={{ color: '#00ff66' }}>To keep scanning right now:</strong> Go to your Account page,
-              tap "Open Google AI Studio" with a different Google account, copy the new API key,
-              come back and add it as a backup key — then tap "Use This" to switch to it.
+            <p style={{ fontSize: 12, color: '#d8ffe6', lineHeight: 1.7, margin: '0 0 10px 0' }}>
+              <strong style={{ color: '#00ff66' }}>To keep scanning right now:</strong>
             </p>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <a href="/account" style={{
-                padding: '8px 16px', background: 'rgba(0,255,102,0.1)', border: '1px solid #00ff66',
-                borderRadius: 3, color: '#00ff66', textDecoration: 'none', fontSize: 12,
-                fontFamily: "'Oswald', sans-serif", textTransform: 'uppercase', letterSpacing: 1,
-              }}>→ Manage API Keys</a>
-              <div style={{ fontSize: 11, color: '#3f6e4a', alignSelf: 'center' }}>
+            <ol style={{ fontSize: 12, color: '#d8ffe6', lineHeight: 1.7, margin: '0 0 14px 0', paddingLeft: 24 }}>
+              <li style={{ marginBottom: 8 }}>Go to <a href="/account" style={{ color: '#00ff66', textDecoration: 'underline' }}>Account → Gemini API Keys</a></li>
+              <li style={{ marginBottom: 8 }}>Open <a href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener noreferrer" style={{ color: '#00ff66', textDecoration: 'underline' }}>Google AI Studio</a> <strong>in a different Google account</strong></li>
+              <li style={{ marginBottom: 8 }}>Copy the API key and paste it in the add key field</li>
+              <li>Tap "Add" then activate the new key — no need to switch accounts on Revelator</li>
+            </ol>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+              <a
+                href="/account"
+                onClick={() => localStorage.setItem('fg_highlight_key_input', 'true')}
+                style={{
+                  padding: '8px 16px', background: 'rgba(0,255,102,0.1)', border: '1px solid #00ff66',
+                  borderRadius: 3, color: '#00ff66', textDecoration: 'none', fontSize: 12,
+                  fontFamily: "'Oswald', sans-serif", textTransform: 'uppercase', letterSpacing: 1,
+                }}>
+                → Go to Account
+              </a>
+              <div style={{ fontSize: 11, color: '#3f6e4a' }}>
                 or wait ~24h for your current key to reset
               </div>
             </div>
