@@ -8,7 +8,7 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import User, PromoCode
+from ..models import User, PromoCode, UserApiKey
 from ..auth import (
     hash_password, verify_password,
     create_access_token, create_refresh_token,
@@ -266,19 +266,86 @@ def set_api_key(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Save user's Gemini API key for quota management."""
+    """Legacy single-key endpoint — kept for backward compatibility."""
     api_key = body.api_key.strip() if body.api_key else None
-
-    # Validate format (should start with "AIza" for Gemini free tier keys)
     if api_key and not api_key.startswith("AIza"):
         raise HTTPException(status_code=400, detail="Invalid API key format. Gemini API keys start with 'AIza'.")
-
     current_user.gemini_api_key = api_key
     db.commit()
-    db.refresh(current_user)
+    return {"success": True, "message": "API key saved" if api_key else "API key removed"}
+
+
+# ── Multi-key endpoints ──────────────────────────────────────────────────────
+
+def _key_to_dict(k: UserApiKey) -> dict:
+    hours_until_reset = None
+    if k.quota_exhausted_at:
+        from datetime import timezone
+        elapsed = (datetime.utcnow() - k.quota_exhausted_at).total_seconds()
+        remaining = max(0, 86400 - elapsed)  # 24h window
+        hours_until_reset = round(remaining / 3600, 1)
 
     return {
-        "success": True,
-        "message": "API key saved" if api_key else "API key removed",
-        "has_api_key": bool(current_user.gemini_api_key),
+        "id": k.id,
+        "label": k.label,
+        "key_preview": f"...{k.api_key[-4:]}",
+        "is_active": bool(k.is_active),
+        "quota_exhausted": bool(k.quota_exhausted_at and hours_until_reset and hours_until_reset > 0),
+        "hours_until_reset": hours_until_reset,
+        "created_at": k.created_at.isoformat() if k.created_at else "",
     }
+
+
+@router.get("/api-keys")
+def list_api_keys(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    keys = db.query(UserApiKey).filter(UserApiKey.user_id == current_user.id).order_by(UserApiKey.created_at).all()
+    return {"keys": [_key_to_dict(k) for k in keys]}
+
+
+class AddKeyRequest(BaseModel):
+    api_key: str
+    label: str = "My Key"
+
+
+@router.post("/api-keys")
+def add_api_key(body: AddKeyRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    api_key = body.api_key.strip()
+    if not api_key.startswith("AIza"):
+        raise HTTPException(status_code=400, detail="Invalid API key format. Gemini API keys start with 'AIza'.")
+
+    count = db.query(UserApiKey).filter(UserApiKey.user_id == current_user.id).count()
+    if count >= 5:
+        raise HTTPException(status_code=400, detail="Maximum of 5 API keys allowed.")
+
+    key = UserApiKey(
+        user_id=current_user.id,
+        label=body.label.strip() or "My Key",
+        api_key=api_key,
+        is_active=count == 0,  # Auto-activate if first key
+    )
+    db.add(key)
+    db.commit()
+    db.refresh(key)
+    return _key_to_dict(key)
+
+
+@router.delete("/api-keys/{key_id}")
+def delete_api_key(key_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    key = db.query(UserApiKey).filter(UserApiKey.id == key_id, UserApiKey.user_id == current_user.id).first()
+    if not key:
+        raise HTTPException(status_code=404, detail="Key not found")
+    db.delete(key)
+    db.commit()
+    return {"success": True}
+
+
+@router.put("/api-keys/{key_id}/activate")
+def activate_api_key(key_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    keys = db.query(UserApiKey).filter(UserApiKey.user_id == current_user.id).all()
+    target = next((k for k in keys if k.id == key_id), None)
+    if not target:
+        raise HTTPException(status_code=404, detail="Key not found")
+    for k in keys:
+        k.is_active = (k.id == key_id)
+    db.commit()
+    return {"success": True}

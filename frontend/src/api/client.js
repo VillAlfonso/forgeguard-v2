@@ -122,6 +122,20 @@ export const api = {
     return request('/auth/api-key', { method: 'PUT', body: JSON.stringify({ api_key: apiKey }) });
   },
 
+  // Multi-key management
+  listApiKeys() {
+    return request('/auth/api-keys');
+  },
+  addApiKey(apiKey, label) {
+    return request('/auth/api-keys', { method: 'POST', body: JSON.stringify({ api_key: apiKey, label }) });
+  },
+  deleteApiKey(keyId) {
+    return request(`/auth/api-keys/${keyId}`, { method: 'DELETE' });
+  },
+  activateApiKey(keyId) {
+    return request(`/auth/api-keys/${keyId}/activate`, { method: 'PUT' });
+  },
+
   // Analysis
   getCategories() {
     return request('/categories');

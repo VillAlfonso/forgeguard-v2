@@ -32,10 +32,25 @@ class User(Base):
 
     scans_this_month = Column(Integer, default=0)
     scan_reset_date = Column(DateTime, nullable=True)
-    gemini_api_key = Column(String, nullable=True)  # User's own Gemini API key
+    gemini_api_key = Column(String, nullable=True)  # legacy single-key field (kept for migration)
 
     # Relationships
     scans = relationship("Scan", back_populates="user", cascade="all, delete-orphan")
+    api_keys = relationship("UserApiKey", back_populates="user", cascade="all, delete-orphan")
+
+
+class UserApiKey(Base):
+    __tablename__ = "user_api_keys"
+
+    id = Column(String, primary_key=True, default=gen_uuid)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    label = Column(String, nullable=False, default="My Key")
+    api_key = Column(String, nullable=False)
+    is_active = Column(Boolean, default=False)
+    quota_exhausted_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="api_keys")
 
 
 class PromoCode(Base):

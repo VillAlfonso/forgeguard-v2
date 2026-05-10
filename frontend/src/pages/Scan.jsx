@@ -13,6 +13,7 @@ export default function Scan() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+  const [quotaExhausted, setQuotaExhausted] = useState(false);
   const [documentType, setDocumentType] = useState('');
   const [documentTypes, setDocumentTypes] = useState([]);
   const [showExtras, setShowExtras] = useState(false);
@@ -109,6 +110,7 @@ export default function Scan() {
     setLoading(true);
     setError('');
     setResult(null);
+    setQuotaExhausted(false);
     try {
       const data = await api.analyze(
         file,
@@ -130,7 +132,11 @@ export default function Scan() {
         setTimeout(() => drawAnnotations(data.annotations, data.original_image_dimensions.width, data.original_image_dimensions.height), 100);
       }
     } catch (err) {
-      setError(err.message);
+      if (err.message === 'quota_exhausted') {
+        setQuotaExhausted(true);
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -483,6 +489,36 @@ export default function Scan() {
             fontSize: 13, color: '#ff8a99', fontFamily: "'JetBrains Mono', monospace", letterSpacing: 0.5,
           }}>
             ⚠ {error}
+          </div>
+        )}
+
+        {quotaExhausted && (
+          <div style={{
+            background: 'rgba(255,160,64,0.08)', border: '1px solid #ffa040', padding: 16, borderRadius: 3,
+            fontFamily: "'JetBrains Mono', monospace",
+          }}>
+            <div style={{ fontSize: 14, color: '#ffa040', fontWeight: 700, marginBottom: 10 }}>
+              ⚠ API Quota Exhausted
+            </div>
+            <p style={{ fontSize: 12, color: '#d8ffe6', lineHeight: 1.7, margin: '0 0 10px 0' }}>
+              Your current API key has used up its free daily quota (1,500 requests/day).
+              It will <strong style={{ color: '#ffa040' }}>reset automatically in ~24 hours</strong>.
+            </p>
+            <p style={{ fontSize: 12, color: '#d8ffe6', lineHeight: 1.7, margin: '0 0 14px 0' }}>
+              <strong style={{ color: '#00ff66' }}>To keep scanning right now:</strong> Go to your Account page,
+              tap "Open Google AI Studio" with a different Google account, copy the new API key,
+              come back and add it as a backup key — then tap "Use This" to switch to it.
+            </p>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <a href="/account" style={{
+                padding: '8px 16px', background: 'rgba(0,255,102,0.1)', border: '1px solid #00ff66',
+                borderRadius: 3, color: '#00ff66', textDecoration: 'none', fontSize: 12,
+                fontFamily: "'Oswald', sans-serif", textTransform: 'uppercase', letterSpacing: 1,
+              }}>→ Manage API Keys</a>
+              <div style={{ fontSize: 11, color: '#3f6e4a', alignSelf: 'center' }}>
+                or wait ~24h for your current key to reset
+              </div>
+            </div>
           </div>
         )}
 

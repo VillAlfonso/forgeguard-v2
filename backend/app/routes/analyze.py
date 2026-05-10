@@ -17,7 +17,7 @@ from PIL import Image
 
 from ..auth import get_current_user, get_user_from_token
 from ..database import get_db
-from ..models import User, Scan
+from ..models import User, Scan, UserApiKey
 from ..config import (
     FREE_SCANS_PER_MONTH, PRO_SCANS_PER_MONTH, PREMIUM_SCANS_PER_MONTH,
     UNLIMITED, LLM_PLANS, UPLOAD_DIR,
@@ -136,8 +136,12 @@ def analyze_document(
     preprocessed = preprocess_image(image)
     print(f"[DEBUG] Image preprocessed: {image.size} → {preprocessed.size}")
 
-    # Get user's API key if available, otherwise use backend key
-    api_key = current_user.gemini_api_key or None
+    # Get active API key from multi-key table, fall back to legacy single key
+    active_key_row = db.query(UserApiKey).filter(
+        UserApiKey.user_id == current_user.id,
+        UserApiKey.is_active == True,
+    ).first()
+    api_key = active_key_row.api_key if active_key_row else (current_user.gemini_api_key or None)
 
     # STAGE 1: Triage — used only to seed alternatives, NOT to narrow the main analysis
     triage = triage_classify(preprocessed, api_key=api_key)
@@ -159,6 +163,14 @@ def analyze_document(
     )
 
     if gemini.get("_unavailable"):
+        # If using a user key, mark it as quota exhausted so the frontend can show a reset timer
+        if active_key_row:
+            active_key_row.quota_exhausted_at = datetime.utcnow()
+            db.commit()
+            raise HTTPException(
+                status_code=429,
+                detail="quota_exhausted",
+            )
         raise HTTPException(status_code=503, detail="Gemini Vision is temporarily unavailable. Please try again in a moment.")
     print(f"[DEBUG] model={gemini.get('model_used')} category={gemini.get('category')} confidence={gemini.get('confidence')} certainty={gemini.get('certainty_level')}")
 

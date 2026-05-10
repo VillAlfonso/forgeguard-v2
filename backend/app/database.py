@@ -100,6 +100,21 @@ def _ensure_columns():
             if "is_forged_belief" not in scan_cols:
                 conn.execute(text("ALTER TABLE scans ADD COLUMN is_forged_belief VARCHAR"))
 
+        # Create user_api_keys table for multi-key management
+        if "user_api_keys" not in table_names:
+            conn.execute(text("""
+                CREATE TABLE user_api_keys (
+                    id VARCHAR PRIMARY KEY,
+                    user_id VARCHAR NOT NULL,
+                    label VARCHAR NOT NULL DEFAULT 'My Key',
+                    api_key VARCHAR NOT NULL,
+                    is_active BOOLEAN NOT NULL DEFAULT 0,
+                    quota_exhausted_at DATETIME,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(user_id) REFERENCES users(id)
+                )
+            """))
+
         # Create admin_audit_logs table if it doesn't exist (for logging admin actions)
         if "admin_audit_logs" not in table_names:
             conn.execute(text("""
