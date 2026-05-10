@@ -270,6 +270,14 @@ export const api = {
     return request('/admin/gemini-status');
   },
 
+  getAbout() {
+    return request('/about', { noAuth: true });
+  },
+
+  getPromptAnalysis() {
+    return request('/prompt-analysis', { noAuth: true });
+  },
+
   // Health
   health() {
     return request('/health', { noAuth: true });
