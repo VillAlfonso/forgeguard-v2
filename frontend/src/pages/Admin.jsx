@@ -211,9 +211,6 @@ export default function Admin() {
           <StatCard label="Total Users" value={stats.total_users} />
           <StatCard label="Total Scans" value={stats.total_scans} />
           <StatCard label="Admins" value={stats.admins} />
-          <StatCard label="Free" value={stats.plans.free} />
-          <StatCard label="Basic" value={stats.plans.basic} />
-          <StatCard label="Pro" value={stats.plans.pro} />
         </div>
       )}
 
