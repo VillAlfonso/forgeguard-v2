@@ -473,6 +473,14 @@ export default function Scan() {
           {loading ? '◌ Running detection…' : '▶ Scan Forgery'}
         </button>
 
+        <div style={{
+          border: '1px solid #1d3825', borderRadius: 3, padding: '10px 14px',
+          background: 'rgba(109,186,133,0.06)', fontSize: 12, color: '#86efac',
+          lineHeight: 1.6,
+        }}>
+          <span style={{ color: '#6dba85', fontWeight: 600 }}>Note:</span> It is highly recommended you use multiple API keys from different Google accounts so that when you hit your quota for your current API key (it resets every 12 hours), you can just activate another one and keep using our program.
+        </div>
+
         {error && (
           <div style={{
             background: 'rgba(255,51,68,0.1)', border: '1px solid #ff3344', padding: 14, borderRadius: 2,

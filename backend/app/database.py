@@ -132,6 +132,10 @@ def _ensure_columns():
                 )
             """))
 
+        # Drop legacy promo_codes table if it still exists
+        if "promo_codes" in table_names:
+            conn.execute(text("DROP TABLE promo_codes"))
+
     _seed_default_roles()
 
 
