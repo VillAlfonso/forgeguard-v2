@@ -12,11 +12,6 @@ __pycache__/
 .Python
 *.egg-info/
 
-# YOLO
-runs/
-*.pt
-!weights/.gitkeep
-
 # IDE
 .idea/
 .vscode/

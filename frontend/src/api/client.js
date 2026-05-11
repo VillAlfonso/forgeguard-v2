@@ -144,7 +144,7 @@ export const api = {
     return request('/categories');
   },
 
-  analyze(file, category, documentType, extras = {}) {
+  analyze(file, category, documentType, extras = {}, signal) {
     const form = new FormData();
     form.append('imageFile', file);
     if (category) form.append('category', category);
@@ -156,7 +156,7 @@ export const api = {
     if (extras.shotType) form.append('shot_type', extras.shotType);
     if (extras.lighting) form.append('lighting', extras.lighting);
     if (extras.physicalClues) form.append('physical_clues', extras.physicalClues);
-    return request('/analyze', { method: 'POST', body: form });
+    return request('/analyze', { method: 'POST', body: form, signal });
   },
 
   getDocumentTypes() {

@@ -1,18 +1,17 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { api } from '../api/client';
-import { useAuth } from '../App';
+import { useAuth, useScan } from '../App';
 import { MagnifierIcon } from '../components/ForensicMotifs';
 import { CATEGORY_BY_KEY } from '../categories';
 
 export default function Scan() {
   const { user } = useAuth();
+  const { status: scanStatus, result, error: scanError, previewUrl: ctxPreview, startScan, stopScan, clearScan } = useScan();
+
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState('');
   const [quotaExhausted, setQuotaExhausted] = useState(false);
   const [documentType, setDocumentType] = useState('');
   const [documentTypes, setDocumentTypes] = useState([]);
@@ -27,18 +26,42 @@ export default function Scan() {
   const fileRef = useRef();
   const canvasRef = useRef();
 
+  const loading = scanStatus === 'scanning';
+  const error = scanError;
+  const activePreview = preview || ctxPreview;
+
   // Load document types on mount
-  React.useEffect(() => {
+  useEffect(() => {
     api.getDocumentTypes()
       .then(data => setDocumentTypes(data.document_types))
       .catch(err => console.error('Failed to load document types:', err));
   }, []);
 
+  // Handle quota exhaustion errors
+  useEffect(() => {
+    if (scanError === 'quota_exhausted' || scanError === 'no_api_key') {
+      setQuotaExhausted(true);
+      localStorage.setItem('fg_highlight_key_input', 'true');
+      localStorage.setItem('fg_no_api_key', scanError === 'no_api_key' ? 'true' : 'false');
+    }
+  }, [scanError]);
+
+  // Draw annotations when result arrives
+  useEffect(() => {
+    if (result?.annotations?.length > 0 && result.original_image_dimensions) {
+      setTimeout(() => drawAnnotations(
+        result.annotations,
+        result.original_image_dimensions.width,
+        result.original_image_dimensions.height,
+      ), 100);
+    }
+  }, [result]);
+
   function resetScan() {
     setFile(null);
     setPreview(null);
-    setResult(null);
-    setError('');
+    clearScan();
+    setQuotaExhausted(false);
   }
 
   function handleFileChange(e) {
@@ -72,7 +95,7 @@ export default function Scan() {
 
   function drawAnnotations(annotations, imgW, imgH) {
     const canvas = canvasRef.current;
-    if (!canvas || !preview) return;
+    if (!canvas || !activePreview) return;
     const img = new Image();
     img.onload = () => {
       const maxW = Math.min(canvas.parentElement.offsetWidth - 32, 800);
@@ -102,46 +125,26 @@ export default function Scan() {
         ctx.fillText(label, x + 4, y - 5);
       });
     };
-    img.src = preview;
+    img.src = activePreview;
   }
 
-  async function handleAnalyze() {
+  function handleAnalyze() {
     if (!file) return;
-    setLoading(true);
-    setError('');
-    setResult(null);
     setQuotaExhausted(false);
-    try {
-      const data = await api.analyze(
-        file,
-        null,
-        documentType !== 'other' ? documentType : null,
-        {
-          suspicionReason: suspicionReason.trim() || null,
-          areaOfConcern: areaOfConcern || null,
-          imageSource: imageSource || null,
-          isForgedBelief: isForgedBelief || null,
-          shotType: shotType || null,
-          lighting: lighting || null,
-          physicalClues: physicalClues || null,
-        }
-      );
-      setResult(data);
-      if (data.annotations?.length > 0) {
-        setTimeout(() => drawAnnotations(data.annotations, data.original_image_dimensions.width, data.original_image_dimensions.height), 100);
-      }
-    } catch (err) {
-      if (err.message === 'quota_exhausted' || err.message === 'no_api_key') {
-        setQuotaExhausted(true);
-        localStorage.setItem('fg_quota_exhausted', 'true');
-        localStorage.setItem('fg_highlight_key_input', 'true');
-        localStorage.setItem('fg_no_api_key', err.message === 'no_api_key' ? 'true' : 'false');
-      } else {
-        setError(err.message);
-      }
-    } finally {
-      setLoading(false);
-    }
+    startScan(
+      file,
+      documentType !== 'other' ? documentType : null,
+      {
+        suspicionReason: suspicionReason.trim() || null,
+        areaOfConcern: areaOfConcern || null,
+        imageSource: imageSource || null,
+        isForgedBelief: isForgedBelief || null,
+        shotType: shotType || null,
+        lighting: lighting || null,
+        physicalClues: physicalClues || null,
+      },
+      preview,
+    );
   }
 
   const verdictColors = {
@@ -165,7 +168,7 @@ export default function Scan() {
         <div className="card">
           <input ref={fileRef} type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
 
-          {!preview ? (
+          {!activePreview ? (
             <>
               {/* Camera-first big primary action */}
               <button
@@ -205,7 +208,7 @@ export default function Scan() {
                 border: '1px solid #1d3825', borderRadius: 3, padding: 12,
                 background: '#000', textAlign: 'center', marginBottom: 12,
               }}>
-                <img src={preview} alt="Preview" style={{
+                <img src={activePreview} alt="Preview" style={{
                   maxWidth: '100%', maxHeight: 360, borderRadius: 2,
                   display: 'block', margin: '0 auto',
                 }} />
@@ -469,9 +472,25 @@ export default function Scan() {
           )}
         </div>
 
-        <button className="btn btn-primary" onClick={handleAnalyze} disabled={!file || loading} style={{ fontSize: 16, padding: '18px 0' }}>
-          {loading ? '◌ Running detection…' : '▶ Scan Forgery'}
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-primary" onClick={handleAnalyze} disabled={!file || loading} style={{ fontSize: 16, padding: '18px 0', flex: 1 }}>
+            {loading ? '◌ Running detection…' : '▶ Scan Forgery'}
+          </button>
+          {loading && (
+            <button
+              onClick={stopScan}
+              title="Stop scan"
+              style={{
+                background: 'rgba(255,51,68,0.08)', border: '1px solid rgba(255,51,68,0.5)',
+                color: '#ff8a99', borderRadius: 3, padding: '0 16px',
+                cursor: 'pointer', fontSize: 13, flexShrink: 0,
+                fontFamily: "'Oswald', sans-serif", textTransform: 'uppercase', letterSpacing: 1,
+              }}
+            >
+              ✕ Stop
+            </button>
+          )}
+        </div>
 
         <div style={{
           border: '1px solid #1d3825', borderRadius: 3, padding: '10px 14px',

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
+import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link, useNavigate, useLocation } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { Capacitor } from '@capacitor/core';
@@ -38,6 +38,70 @@ function ThemeProvider({ children }) {
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
+  );
+}
+
+// ── Scan Context ────────────────────────────────────
+
+const ScanContext = createContext(null);
+
+export function useScan() {
+  return useContext(ScanContext);
+}
+
+function ScanProvider({ children }) {
+  const [status, setStatus] = useState('idle'); // 'idle' | 'scanning' | 'done' | 'error'
+  const [result, setResult] = useState(null);
+  const [scanError, setScanError] = useState('');
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const abortRef = useRef(null);
+
+  async function startScan(file, docType, extras, preview) {
+    if (abortRef.current) abortRef.current.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+
+    setStatus('scanning');
+    setResult(null);
+    setScanError('');
+    setPreviewUrl(preview || null);
+
+    try {
+      const data = await api.analyze(file, null, docType, extras, ctrl.signal);
+      if (!ctrl.signal.aborted) {
+        setStatus('done');
+        setResult(data);
+      }
+    } catch (err) {
+      if (ctrl.signal.aborted) return;
+      if (err.message === 'quota_exhausted' || err.message === 'no_api_key') {
+        localStorage.setItem('fg_quota_exhausted', 'true');
+        localStorage.setItem('fg_highlight_key_input', 'true');
+        localStorage.setItem('fg_no_api_key', err.message === 'no_api_key' ? 'true' : 'false');
+      }
+      setStatus('error');
+      setScanError(err.message);
+    }
+  }
+
+  function stopScan() {
+    if (abortRef.current) abortRef.current.abort();
+    setStatus('idle');
+    setResult(null);
+    setScanError('');
+  }
+
+  function clearScan() {
+    setStatus('idle');
+    setResult(null);
+    setScanError('');
+    setPreviewUrl(null);
+  }
+
+  return (
+    <ScanContext.Provider value={{ status, result, error: scanError, previewUrl, startScan, stopScan, clearScan }}>
+      {children}
+    </ScanContext.Provider>
   );
 }
 
@@ -137,8 +201,10 @@ function BootSplash() {
 function Layout({ children }) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { status: scanStatus, stopScan } = useScan();
   const location = useLocation();
   const navigate = useNavigate();
+  const onScanPage = location.pathname === '/scan';
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerOffset, setDrawerOffset] = useState(0); // for swipe-drag visual feedback
   const [quotaExhausted, setQuotaExhausted] = useState(() => localStorage.getItem('fg_quota_exhausted') === 'true');
@@ -591,6 +657,75 @@ function Layout({ children }) {
         </aside>
       )}
 
+      {/* Floating scan status pill — visible on all pages while a scan is running */}
+      {user && (scanStatus === 'scanning' || (scanStatus === 'done' && !onScanPage) || (scanStatus === 'error' && !onScanPage)) && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 20, zIndex: 200,
+          background: 'rgba(6,18,10,0.97)',
+          border: `1px solid ${scanStatus === 'done' ? '#00ff66' : scanStatus === 'error' ? '#ff3344' : '#1d3825'}`,
+          borderRadius: 6, padding: '10px 14px',
+          boxShadow: `0 4px 24px rgba(0,0,0,0.7), 0 0 16px ${scanStatus === 'done' ? 'rgba(0,255,102,0.2)' : scanStatus === 'error' ? 'rgba(255,51,68,0.2)' : 'rgba(0,255,102,0.1)'}`,
+          display: 'flex', alignItems: 'center', gap: 10,
+          minWidth: 200, maxWidth: 280,
+        }}>
+          {scanStatus === 'scanning' && (
+            <>
+              <span className="mono" style={{ fontSize: 11, color: '#6dba85', animation: 'ring-spin 1.2s linear infinite', display: 'inline-block' }}>◌</span>
+              <span className="mono" style={{ fontSize: 11, color: '#86efac', letterSpacing: 1, flex: 1 }}>Scanning in progress…</span>
+              <button
+                onClick={stopScan}
+                title="Stop scan"
+                style={{
+                  background: 'rgba(255,51,68,0.12)', border: '1px solid rgba(255,51,68,0.5)',
+                  color: '#ff8a99', borderRadius: 3, padding: '3px 8px',
+                  cursor: 'pointer', fontSize: 11,
+                  fontFamily: "'Oswald', sans-serif", textTransform: 'uppercase', letterSpacing: 1,
+                  flexShrink: 0,
+                }}
+              >
+                ✕ Stop
+              </button>
+            </>
+          )}
+          {scanStatus === 'done' && !onScanPage && (
+            <>
+              <span style={{ color: '#00ff66', fontSize: 14 }}>✓</span>
+              <span className="mono" style={{ fontSize: 11, color: '#86efac', letterSpacing: 1, flex: 1 }}>Scan complete</span>
+              <button
+                onClick={() => navigate('/scan')}
+                style={{
+                  background: 'rgba(0,255,102,0.12)', border: '1px solid rgba(0,255,102,0.5)',
+                  color: '#00ff66', borderRadius: 3, padding: '3px 8px',
+                  cursor: 'pointer', fontSize: 11,
+                  fontFamily: "'Oswald', sans-serif", textTransform: 'uppercase', letterSpacing: 1,
+                  flexShrink: 0,
+                }}
+              >
+                View →
+              </button>
+            </>
+          )}
+          {scanStatus === 'error' && !onScanPage && (
+            <>
+              <span style={{ color: '#ff3344', fontSize: 14 }}>⚠</span>
+              <span className="mono" style={{ fontSize: 11, color: '#ff8a99', letterSpacing: 1, flex: 1 }}>Scan failed</span>
+              <button
+                onClick={() => navigate('/scan')}
+                style={{
+                  background: 'rgba(255,51,68,0.12)', border: '1px solid rgba(255,51,68,0.5)',
+                  color: '#ff8a99', borderRadius: 3, padding: '3px 8px',
+                  cursor: 'pointer', fontSize: 11,
+                  fontFamily: "'Oswald', sans-serif", textTransform: 'uppercase', letterSpacing: 1,
+                  flexShrink: 0,
+                }}
+              >
+                View →
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       <main style={{ padding: '20px 0', minHeight: 'calc(100vh - 80px)' }}>
         <div className="container">
           {children}
@@ -620,6 +755,7 @@ export default function App() {
       <BrowserRouter>
         <ThemeProvider>
           <AuthProvider>
+            <ScanProvider>
             <Layout>
               <Routes>
               <Route path="/login" element={<Login />} />
@@ -634,6 +770,7 @@ export default function App() {
               <Route path="*" element={<Navigate to="/scan" replace />} />
               </Routes>
             </Layout>
+            </ScanProvider>
           </AuthProvider>
         </ThemeProvider>
       </BrowserRouter>
