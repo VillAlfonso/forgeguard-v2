@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from ..auth import get_current_admin, get_current_super_admin, get_user_from_token, hash_password
 from ..config import UPLOAD_DIR
 from ..database import get_db
-from ..models import User, Scan, PromoCode, AdminAuditLog, Role
+from ..models import User, Scan, AdminAuditLog, Role
 from datetime import datetime, timedelta, timezone
 import json
 
@@ -247,87 +247,6 @@ def promote_to_super_admin(
 # ============================================
 # Promo Code Management (Super Admin)
 # ============================================
-
-class GenerateCodeRequest(BaseModel):
-    plan: str  # free, pro, premium
-    code: str  # custom code, e.g., "CLASS-2024-FALL"
-    max_uses: int  # required: max number of uses
-    expires_in_days: Optional[int] = None
-
-
-@router.post("/super/generate-code")
-def generate_promo_code(
-    body: GenerateCodeRequest,
-    super_admin: User = Depends(get_current_super_admin),
-    db: Session = Depends(get_db),
-):
-    """Generate a promo code (super admin only)."""
-    if body.plan not in ("free", "pro", "premium"):
-        raise HTTPException(status_code=400, detail="Invalid plan. Options: free, pro, premium")
-
-    if db.query(PromoCode).filter(PromoCode.code == body.code.upper()).first():
-        raise HTTPException(status_code=400, detail="Code already exists")
-
-    expires_at = None
-    if body.expires_in_days:
-        expires_at = datetime.utcnow() + timedelta(days=body.expires_in_days)
-
-    code = PromoCode(
-        code=body.code.upper(),
-        plan=body.plan,
-        max_uses=body.max_uses,
-        expires_at=expires_at,
-        created_by=super_admin.id,
-    )
-    db.add(code)
-    db.commit()
-    db.refresh(code)
-
-    return {
-        "id": code.id,
-        "code": code.code,
-        "plan": code.plan,
-        "max_uses": code.max_uses,
-        "expires_at": code.expires_at.isoformat() if code.expires_at else None,
-        "created_at": code.created_at.isoformat(),
-    }
-
-
-@router.get("/super/codes")
-def list_promo_codes(super_admin: User = Depends(get_current_super_admin), db: Session = Depends(get_db)):
-    """View all promo codes (super admin only)."""
-    codes = db.query(PromoCode).order_by(PromoCode.created_at.desc()).all()
-    return {
-        "codes": [
-            {
-                "id": c.id,
-                "code": c.code,
-                "plan": c.plan,
-                "is_active": c.is_active,
-                "uses": f"{c.uses_count}/{c.max_uses if c.max_uses else 'unlimited'}",
-                "expires_at": c.expires_at.isoformat() if c.expires_at else "Never",
-                "created_at": c.created_at.isoformat(),
-            }
-            for c in codes
-        ]
-    }
-
-
-@router.post("/super/codes/{code_id}/deactivate")
-def deactivate_code(
-    code_id: str,
-    super_admin: User = Depends(get_current_super_admin),
-    db: Session = Depends(get_db),
-):
-    """Deactivate a promo code (super admin only)."""
-    code = db.query(PromoCode).filter(PromoCode.id == code_id).first()
-    if not code:
-        raise HTTPException(status_code=404, detail="Code not found")
-
-    code.is_active = False
-    db.commit()
-    return {"success": True, "message": f"Code {code.code} deactivated"}
-
 
 # ============================================
 # Gemini Vision Status

@@ -8,7 +8,7 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import User, PromoCode, UserApiKey
+from ..models import User, UserApiKey
 from ..auth import (
     hash_password, verify_password,
     create_access_token, create_refresh_token,
@@ -228,40 +228,6 @@ def update_me(
     return user_to_dict(current_user, db)
 
 
-class RedeemCodeRequest(BaseModel):
-    code: str
-
-
-@router.post("/redeem-code")
-def redeem_code(
-    body: RedeemCodeRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    promo = db.query(PromoCode).filter(PromoCode.code == body.code.strip()).first()
-
-    if not promo:
-        raise HTTPException(status_code=404, detail="Invalid code")
-
-    if not promo.is_active:
-        raise HTTPException(status_code=400, detail="Code is inactive")
-
-    if promo.expires_at and datetime.utcnow() > promo.expires_at:
-        raise HTTPException(status_code=400, detail="Code has expired")
-
-    if promo.max_uses and promo.uses_count >= promo.max_uses:
-        raise HTTPException(status_code=400, detail="Code usage limit reached")
-
-    current_user.plan = promo.plan
-    promo.uses_count += 1
-    db.commit()
-    db.refresh(current_user)
-
-    return {
-        "success": True,
-        "message": f"Plan upgraded to {promo.plan}",
-        "user": user_to_dict(current_user),
-    }
 
 
 class ApiKeyRequest(BaseModel):
