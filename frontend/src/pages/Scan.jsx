@@ -197,7 +197,7 @@ export default function Scan() {
                 }}
               >
                 <div className="mono glow" style={{ fontSize: 28, marginBottom: 8, color: '#00ff66' }}>+</div>
-                <p className="mono" style={{ color: '#86efac', fontSize: 12, letterSpacing: 1.5 }}>UPLOAD FROM GALLERY</p>
+                <p className="mono" style={{ color: '#86efac', fontSize: 12, letterSpacing: 1.5 }}>UPLOAD FROM DEVICE</p>
               </div>
             </>
           ) : (
@@ -496,7 +496,7 @@ export default function Scan() {
           background: 'rgba(109,186,133,0.06)', fontSize: 12, color: '#86efac',
           lineHeight: 1.6,
         }}>
-          <span style={{ color: '#6dba85', fontWeight: 600 }}>Note:</span> It is highly recommended you use multiple API keys from different Google accounts so that when you hit your quota for your current API key (it resets every 12 hours), you can just activate another one and keep using our program.
+          <span style={{ color: '#6dba85', fontWeight: 600 }}>Note:</span> It is highly recommended you use multiple API keys from different Google accounts so that when you hit your quota for your current API key (it resets every 12 hours), you can just activate another one and keep scanning documents.
         </div>
 
         {error && (
