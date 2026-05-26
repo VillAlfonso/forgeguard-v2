@@ -110,6 +110,20 @@ export const api = {
     });
   },
 
+  forgotPassword(email) {
+    return request('/auth/forgot-password', {
+      method: 'POST', noAuth: true,
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  resetPassword(token, password) {
+    return request('/auth/reset-password', {
+      method: 'POST', noAuth: true,
+      body: JSON.stringify({ token, password }),
+    });
+  },
+
   getMe() {
     return request('/auth/me');
   },

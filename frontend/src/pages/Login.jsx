@@ -148,9 +148,12 @@ export default function Login() {
             <label className="mono" style={{ fontSize: 11, color: '#86efac', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 6, display: 'block' }}>Email</label>
             <input className="input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required />
           </div>
-          <div style={{ marginBottom: 24 }}>
+          <div style={{ marginBottom: 8 }}>
             <label className="mono" style={{ fontSize: 11, color: '#86efac', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 6, display: 'block' }}>Password</label>
             <input className="input" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Your password" required />
+          </div>
+          <div style={{ textAlign: 'right', marginBottom: 24 }}>
+            <Link to="/forgot-password" style={{ fontSize: 12, color: '#6dba85' }}>Forgot password?</Link>
           </div>
           <button className="btn btn-primary" type="submit" disabled={loading} style={{ width: '100%' }}>
             {loading ? '◌ Authenticating…' : '▶ Sign In'}

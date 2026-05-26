@@ -7,6 +7,8 @@ import { api } from './api/client';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Terms from './pages/Terms';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Scan from './pages/Scan';
 import SampleGallery from './pages/SampleGallery';
 import History from './pages/History';
@@ -762,6 +764,8 @@ export default function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/terms" element={<Terms />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/" element={<Navigate to="/scan" replace />} />
               <Route path="/scan" element={<ProtectedRoute><Scan /></ProtectedRoute>} />
               <Route path="/samples/:categoryId" element={<ProtectedRoute><SampleGallery /></ProtectedRoute>} />

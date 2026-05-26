@@ -13,10 +13,10 @@ from ..models import User, UserApiKey
 from ..auth import (
     hash_password, verify_password,
     create_access_token, create_refresh_token, create_verification_token,
-    decode_token, get_current_user,
+    create_reset_token, decode_token, get_current_user,
 )
 from ..config import GOOGLE_CLIENT_ID, FRONTEND_URL
-from ..email_utils import send_verification_email
+from ..email_utils import send_verification_email, send_reset_email
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -60,6 +60,13 @@ class RegisterResponse(BaseModel):
 
 class ResendRequest(BaseModel):
     email: str
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    password: str
 
 
 def user_to_dict(user: User, db: Session = None) -> dict:
@@ -181,6 +188,37 @@ def resend_verification(body: ResendRequest, db: Session = Depends(get_db)):
         db.commit()
         send_verification_email(user.email, create_verification_token(user.id))
     return {"message": "If that account needs verification, a new link has been sent."}
+
+
+@router.post("/forgot-password")
+def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    """Email a password-reset link. Always returns success so emails can't be enumerated."""
+    user = db.query(User).filter(User.email == body.email).first()
+    # Only password accounts can reset; Google-only accounts have no password to change.
+    if user and user.hashed_password:
+        send_reset_email(user.email, create_reset_token(user.id))
+    return {"message": "If an account exists for that email, a reset link has been sent."}
+
+
+@router.post("/reset-password")
+def reset_password(body: ResetPasswordRequest, db: Session = Depends(get_db)):
+    """Set a new password using a valid reset token from the emailed link."""
+    payload = decode_token(body.token)
+    if not payload or payload.get("type") != "reset":
+        raise HTTPException(status_code=400, detail="This reset link is invalid or has expired.")
+
+    user = db.query(User).filter(User.id == payload["sub"]).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="This reset link is invalid or has expired.")
+
+    if len(body.password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+
+    user.hashed_password = hash_password(body.password)
+    # Completing a reset proves email ownership, so mark verified too.
+    user.is_verified = True
+    db.commit()
+    return {"message": "Password updated. You can now sign in."}
 
 
 @router.post("/google", response_model=TokenResponse)
