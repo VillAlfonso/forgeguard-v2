@@ -4,6 +4,7 @@ Authentication routes: register, login, refresh, me, Google OAuth.
 
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
@@ -11,10 +12,11 @@ from ..database import get_db
 from ..models import User, UserApiKey
 from ..auth import (
     hash_password, verify_password,
-    create_access_token, create_refresh_token,
+    create_access_token, create_refresh_token, create_verification_token,
     decode_token, get_current_user,
 )
-from ..config import GOOGLE_CLIENT_ID
+from ..config import GOOGLE_CLIENT_ID, FRONTEND_URL
+from ..email_utils import send_verification_email
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -51,6 +53,14 @@ class UserResponse(BaseModel):
 class GoogleAuthRequest(BaseModel):
     id_token: str
 
+class RegisterResponse(BaseModel):
+    message: str
+    email: str
+    verification_required: bool = True
+
+class ResendRequest(BaseModel):
+    email: str
+
 
 def user_to_dict(user: User, db: Session = None) -> dict:
     from ..models import Role
@@ -75,7 +85,7 @@ def user_to_dict(user: User, db: Session = None) -> dict:
 
 # ── Endpoints ───────────────────────────────────────────
 
-@router.post("/register", response_model=TokenResponse)
+@router.post("/register", response_model=RegisterResponse)
 def register(body: RegisterRequest, db: Session = Depends(get_db)):
     # Check duplicates
     if db.query(User).filter(User.email == body.email).first():
@@ -86,22 +96,27 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
     if len(body.password) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
 
+    # Account is created unverified; the user can't log in until they confirm
+    # their email via the link we send below.
     user = User(
         email=body.email,
         username=body.username,
         hashed_password=hash_password(body.password),
         full_name=body.full_name,
+        is_verified=False,
         scans_this_month=0,
         scan_reset_date=datetime.utcnow(),
+        verification_sent_at=datetime.utcnow(),
     )
     db.add(user)
     db.commit()
     db.refresh(user)
 
-    return TokenResponse(
-        access_token=create_access_token(user.id),
-        refresh_token=create_refresh_token(user.id),
-        user=user_to_dict(user, db),
+    send_verification_email(user.email, create_verification_token(user.id))
+
+    return RegisterResponse(
+        message="Account created. Check your email to confirm your address before signing in.",
+        email=user.email,
     )
 
 
@@ -112,6 +127,8 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account disabled")
+    if not user.is_verified:
+        raise HTTPException(status_code=403, detail="Please verify your email before signing in. Check your inbox or request a new link.")
 
     return TokenResponse(
         access_token=create_access_token(user.id),
@@ -135,6 +152,35 @@ def refresh_token(body: RefreshRequest, db: Session = Depends(get_db)):
         refresh_token=create_refresh_token(user.id),
         user=user_to_dict(user, db),
     )
+
+
+@router.get("/verify-email")
+def verify_email(token: str, db: Session = Depends(get_db)):
+    """Confirm an email address from the link we sent, then bounce to the login page."""
+    payload = decode_token(token)
+    if not payload or payload.get("type") != "verify":
+        return RedirectResponse(url=f"{FRONTEND_URL}/login?verified=0")
+
+    user = db.query(User).filter(User.id == payload["sub"]).first()
+    if not user:
+        return RedirectResponse(url=f"{FRONTEND_URL}/login?verified=0")
+
+    if not user.is_verified:
+        user.is_verified = True
+        db.commit()
+
+    return RedirectResponse(url=f"{FRONTEND_URL}/login?verified=1")
+
+
+@router.post("/resend-verification")
+def resend_verification(body: ResendRequest, db: Session = Depends(get_db)):
+    """Send a fresh verification link. Always returns success to avoid leaking which emails exist."""
+    user = db.query(User).filter(User.email == body.email).first()
+    if user and not user.is_verified and user.hashed_password:
+        user.verification_sent_at = datetime.utcnow()
+        db.commit()
+        send_verification_email(user.email, create_verification_token(user.id))
+    return {"message": "If that account needs verification, a new link has been sent."}
 
 
 @router.post("/google", response_model=TokenResponse)

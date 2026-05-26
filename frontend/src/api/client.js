@@ -103,6 +103,13 @@ export const api = {
     });
   },
 
+  resendVerification(email) {
+    return request('/auth/resend-verification', {
+      method: 'POST', noAuth: true,
+      body: JSON.stringify({ email }),
+    });
+  },
+
   getMe() {
     return request('/auth/me');
   },

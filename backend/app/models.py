@@ -34,6 +34,7 @@ class User(Base):
     scans_this_month = Column(Integer, default=0)
     scan_reset_date = Column(DateTime, nullable=True)
     gemini_api_key = Column(String, nullable=True)  # legacy single-key field (kept for migration)
+    verification_sent_at = Column(DateTime, nullable=True)  # last time a verification email was sent
 
     # Relationships
     scans = relationship("Scan", back_populates="user", cascade="all, delete-orphan")

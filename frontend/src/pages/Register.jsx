@@ -12,6 +12,8 @@ export default function Register() {
   const { loginUser, user } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: '', username: '', password: '', full_name: '' });
+  const [agreed, setAgreed] = useState(false);
+  const [registered, setRegistered] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -22,6 +24,7 @@ export default function Register() {
   }
 
   async function handleNativeGoogleSignUp() {
+    if (!agreed) { setError('Please agree to the Terms of Service first.'); return; }
     setError('');
     setLoading(true);
     try {
@@ -38,12 +41,12 @@ export default function Register() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (!agreed) { setError('Please agree to the Terms of Service first.'); return; }
     setError('');
     setLoading(true);
     try {
-      const data = await api.register(form.email, form.username, form.password, form.full_name);
-      loginUser(data);
-      navigate('/scan');
+      await api.register(form.email, form.username, form.password, form.full_name);
+      setRegistered(true);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -52,6 +55,42 @@ export default function Register() {
   }
 
   const labelStyle = { fontSize: 11, color: '#86efac', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 6, display: 'block', fontFamily: "'JetBrains Mono', monospace" };
+
+  if (registered) {
+    return (
+      <div style={{ maxWidth: 440, margin: 'clamp(20px, 6vw, 60px) auto' }}>
+        <div className="card" style={{ textAlign: 'center' }}>
+          <div className="mono glow" style={{ fontSize: 40, color: '#00ff66', marginBottom: 12 }}>✉</div>
+          <h2 className="oswald" style={{ fontSize: 20, letterSpacing: 2, color: '#d8ffe6', marginBottom: 14 }}>
+            CHECK YOUR EMAIL
+          </h2>
+          <p style={{ fontSize: 14, color: '#86efac', lineHeight: 1.6, marginBottom: 8 }}>
+            We sent a confirmation link to <strong style={{ color: '#d8ffe6' }}>{form.email}</strong>.
+          </p>
+          <p style={{ fontSize: 13, color: '#6dba85', lineHeight: 1.6, marginBottom: 22 }}>
+            Click the link in that email to activate your account, then sign in. The link expires in 24 hours.
+          </p>
+          <button
+            className="btn btn-primary"
+            style={{ width: '100%' }}
+            onClick={async () => {
+              setError('');
+              try { await api.resendVerification(form.email); } catch {}
+              setError('If it didn’t arrive, we’ve sent another link.');
+            }}
+          >
+            ↻ Resend email
+          </button>
+          <p style={{ textAlign: 'center', marginTop: 18, fontSize: 13, color: '#86efac' }}>
+            <Link to="/login">Back to sign in</Link>
+          </p>
+          {error && (
+            <p className="mono" style={{ marginTop: 12, fontSize: 12, color: '#6dba85' }}>{error}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: 440, margin: 'clamp(20px, 5vw, 40px) auto', position: 'relative' }}>
@@ -104,11 +143,26 @@ export default function Register() {
             <label style={labelStyle}>Email</label>
             <input className="input" type="email" value={form.email} onChange={update('email')} placeholder="you@example.com" required />
           </div>
-          <div style={{ marginBottom: 24 }}>
+          <div style={{ marginBottom: 18 }}>
             <label style={labelStyle}>Password</label>
             <input className="input" type="password" value={form.password} onChange={update('password')} placeholder="Min 6 characters" required minLength={6} />
           </div>
-          <button className="btn btn-primary" type="submit" disabled={loading} style={{ width: '100%' }}>
+          <label style={{
+            display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 22,
+            fontSize: 12, color: '#86efac', lineHeight: 1.5, cursor: 'pointer',
+          }}>
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={e => setAgreed(e.target.checked)}
+              style={{ marginTop: 2, width: 16, height: 16, accentColor: '#00ff66', flexShrink: 0 }}
+            />
+            <span>
+              I have read and agree to the{' '}
+              <Link to="/terms" target="_blank" style={{ color: '#00ff66' }}>Terms of Service &amp; Privacy Policy</Link>.
+            </span>
+          </label>
+          <button className="btn btn-primary" type="submit" disabled={loading || !agreed} style={{ width: '100%', opacity: agreed ? 1 : 0.55 }}>
             {loading ? '◌ Creating account…' : '▶ Create Account'}
           </button>
         </form>

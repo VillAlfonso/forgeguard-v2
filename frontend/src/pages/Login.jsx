@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { Capacitor } from '@capacitor/core';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
@@ -11,12 +11,24 @@ import { FingerprintWatermark } from '../components/ForensicMotifs';
 export default function Login() {
   const { loginUser, user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const verifiedParam = searchParams.get('verified');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
+  const [needsResend, setNeedsResend] = useState(false);
   const [loading, setLoading] = useState(false);
 
   if (user) { navigate('/scan', { replace: true }); return null; }
+
+  async function handleResend() {
+    if (!email) { setError('Enter your email above, then tap resend.'); return; }
+    setError('');
+    try { await api.resendVerification(email); } catch {}
+    setInfo('Verification link sent. Check your inbox.');
+    setNeedsResend(false);
+  }
 
   async function handleNativeGoogleSignIn() {
     setError('');
@@ -43,6 +55,7 @@ export default function Login() {
       navigate('/scan');
     } catch (err) {
       setError(err.message);
+      if (/verify/i.test(err.message)) setNeedsResend(true);
     } finally {
       setLoading(false);
     }
@@ -79,6 +92,33 @@ export default function Login() {
           ▸ Sign In
         </h2>
 
+        {verifiedParam === '1' && (
+          <div style={{
+            background: 'rgba(0,255,102,0.1)', border: '1px solid #00ff66', padding: 12,
+            borderRadius: 2, marginBottom: 16, fontSize: 13, color: '#86efac',
+            fontFamily: "'JetBrains Mono', monospace",
+          }}>
+            ✓ Email confirmed. You can sign in now.
+          </div>
+        )}
+        {verifiedParam === '0' && (
+          <div style={{
+            background: 'rgba(255,170,0,0.1)', border: '1px solid #ffaa00', padding: 12,
+            borderRadius: 2, marginBottom: 16, fontSize: 13, color: '#ffcf80',
+            fontFamily: "'JetBrains Mono', monospace",
+          }}>
+            ⚠ That link is invalid or expired. Sign in to request a new one.
+          </div>
+        )}
+        {info && (
+          <div style={{
+            background: 'rgba(0,255,102,0.1)', border: '1px solid #00ff66', padding: 12,
+            borderRadius: 2, marginBottom: 16, fontSize: 13, color: '#86efac',
+            fontFamily: "'JetBrains Mono', monospace",
+          }}>
+            ✓ {info}
+          </div>
+        )}
         {error && (
           <div style={{
             background: 'rgba(255,51,68,0.1)', border: '1px solid #ff3344', padding: 12,
@@ -86,6 +126,20 @@ export default function Login() {
             fontFamily: "'JetBrains Mono', monospace",
           }}>
             ⚠ {error}
+            {needsResend && (
+              <button
+                type="button"
+                onClick={handleResend}
+                style={{
+                  display: 'block', marginTop: 10, background: 'transparent',
+                  border: '1px solid #ff8a99', color: '#ff8a99', padding: '6px 12px',
+                  borderRadius: 2, fontSize: 12, cursor: 'pointer',
+                  fontFamily: "'JetBrains Mono', monospace",
+                }}
+              >
+                ↻ Resend verification email
+              </button>
+            )}
           </div>
         )}
 

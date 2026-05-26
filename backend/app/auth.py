@@ -54,6 +54,16 @@ def create_refresh_token(user_id: str) -> str:
     )
 
 
+def create_verification_token(user_id: str) -> str:
+    """Short-lived token emailed to a user to confirm their address (24h)."""
+    expire = datetime.utcnow() + timedelta(hours=24)
+    return jwt.encode(
+        {"sub": user_id, "exp": expire, "type": "verify"},
+        SECRET_KEY,
+        algorithm=JWT_ALGORITHM,
+    )
+
+
 def decode_token(token: str) -> Optional[dict]:
     try:
         return jwt.decode(token, SECRET_KEY, algorithms=[JWT_ALGORITHM])

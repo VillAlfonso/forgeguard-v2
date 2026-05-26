@@ -54,6 +54,12 @@ def _ensure_columns():
                 conn.execute(text("ALTER TABLE users ADD COLUMN gemini_api_key VARCHAR"))
             if "plan" not in user_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN plan VARCHAR DEFAULT 'free'"))
+            if "verification_sent_at" not in user_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN verification_sent_at DATETIME"))
+                # One-time grandfather: every account that exists before email
+                # verification shipped is treated as already verified, so we
+                # don't lock out current users when login starts requiring it.
+                conn.execute(text("UPDATE users SET is_verified = 1"))
 
             # Plan rename migration: legacy 'basic' -> new 'pro' ($5 unlimited);
             # legacy 'pro' (1000-scan tier) -> new 'premium' ($10 unlimited + AI).

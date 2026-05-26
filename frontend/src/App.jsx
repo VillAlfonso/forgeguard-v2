@@ -6,6 +6,7 @@ import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { api } from './api/client';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Terms from './pages/Terms';
 import Scan from './pages/Scan';
 import SampleGallery from './pages/SampleGallery';
 import History from './pages/History';
@@ -760,6 +761,7 @@ export default function App() {
               <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/terms" element={<Terms />} />
               <Route path="/" element={<Navigate to="/scan" replace />} />
               <Route path="/scan" element={<ProtectedRoute><Scan /></ProtectedRoute>} />
               <Route path="/samples/:categoryId" element={<ProtectedRoute><SampleGallery /></ProtectedRoute>} />
