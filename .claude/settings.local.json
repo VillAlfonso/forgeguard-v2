@@ -65,7 +65,13 @@
       "Bash(ipconfig)",
       "Bash(findstr /i \"IPv4\")",
       "Bash(.\\\\gradlew.bat assembleDebug)",
-      "PowerShell(Get-Item \"C:\\\\Revelator\\\\frontend\\\\android\\\\app\\\\build\\\\outputs\\\\apk\\\\debug\\\\app-debug.apk\" | Select-Object Name, @{Name='Size MB';Expression={[math]::Round\\($_.Length/1MB, 2\\)}}, LastWriteTime)"
+      "PowerShell(Get-Item \"C:\\\\Revelator\\\\frontend\\\\android\\\\app\\\\build\\\\outputs\\\\apk\\\\debug\\\\app-debug.apk\" | Select-Object Name, @{Name='Size MB';Expression={[math]::Round\\($_.Length/1MB, 2\\)}}, LastWriteTime)",
+      "Bash(git merge *)",
+      "Bash(git mv *)",
+      "PowerShell(npm --prefix C:\\\\Revelator\\\\frontend run build)",
+      "PowerShell(Get-Item C:\\\\Revelator\\\\frontend\\\\android\\\\app\\\\build\\\\outputs\\\\apk\\\\debug\\\\app-debug.apk | Select-Object FullName, @{Name='SizeMB';Expression={[Math]::Round\\($_.Length/1MB, 2\\)}}, LastWriteTime)",
+      "PowerShell($apk = Get-Item C:\\\\Revelator\\\\frontend\\\\android\\\\app\\\\build\\\\outputs\\\\apk\\\\debug\\\\app-debug.apk; \"Path: $\\($apk.FullName\\)\"; \"Size: $\\([Math]::Round\\($apk.Length/1MB, 2\\)\\) MB\"; \"Built: $\\($apk.LastWriteTime\\)\")",
+      "PowerShell(npm --prefix C:\\\\Revelator\\\\frontend install lucide-react)"
     ]
   }
 }
