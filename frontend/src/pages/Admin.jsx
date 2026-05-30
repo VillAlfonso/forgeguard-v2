@@ -213,7 +213,6 @@ export default function Admin() {
             display: 'inline-flex', alignItems: 'center', gap: 6,
           }}
         >
-          <GraduationCap size={14} strokeWidth={2.2} />
           Sections
         </button>
         {isSuperAdmin && (
@@ -464,7 +463,19 @@ function UserRow({ user, isMe, isSuperAdmin, onEdit, onDelete, onBan, onUnban, o
       </div>
       {canMutate && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <button className="btn" onClick={onEdit} disabled={isMe} title={isMe ? 'You cannot edit your own account here' : 'Edit user'}>
+          <button
+            className="btn"
+            onClick={onEdit}
+            disabled={isMe}
+            style={isMe ? {
+              background: 'transparent', borderColor: '#1d3825', color: '#3f6e4a',
+            } : {
+              background: 'rgba(124, 184, 255, 0.06)',
+              borderColor: '#2a4a6e',
+              color: '#7cb8ff',
+            }}
+            title={isMe ? 'You cannot edit your own account here' : 'Edit user'}
+          >
             Edit
           </button>
           {user.role === 'user' && (
@@ -500,7 +511,13 @@ function UserRow({ user, isMe, isSuperAdmin, onEdit, onDelete, onBan, onUnban, o
               className="btn"
               onClick={onBan}
               disabled={isMe || isBanning}
-              style={{ borderColor: isMe ? '#1d3825' : '#ff9500', color: isMe ? '#3f6e4a' : '#ffa500' }}
+              style={isMe ? {
+                background: 'transparent', borderColor: '#1d3825', color: '#3f6e4a',
+              } : {
+                background: 'rgba(255,170,64,0.06)',
+                borderColor: '#7a4e10',
+                color: '#ffa040',
+              }}
               title={isMe ? 'You cannot ban your own account' : 'Ban user'}
             >
               {isBanning ? 'Banning...' : 'Ban'}
@@ -510,7 +527,11 @@ function UserRow({ user, isMe, isSuperAdmin, onEdit, onDelete, onBan, onUnban, o
               className="btn"
               onClick={onUnban}
               disabled={isBanning}
-              style={{ borderColor: '#00cc88', color: '#00ff99' }}
+              style={{
+                background: 'rgba(0,255,102,0.06)',
+                borderColor: '#1f5d39',
+                color: '#00ff66',
+              }}
               title="Unban user"
             >
               {isBanning ? 'Unbanning...' : 'Unban'}
@@ -520,7 +541,13 @@ function UserRow({ user, isMe, isSuperAdmin, onEdit, onDelete, onBan, onUnban, o
             className="btn"
             onClick={onDelete}
             disabled={isMe}
-            style={{ borderColor: isMe ? '#1d3825' : '#ff3344', color: isMe ? '#3f6e4a' : '#ff8a99' }}
+            style={isMe ? {
+              background: 'transparent', borderColor: '#1d3825', color: '#3f6e4a',
+            } : {
+              background: 'rgba(255,51,68,0.08)',
+              borderColor: '#7a1f28',
+              color: '#ff8a99',
+            }}
             title={isMe ? 'You cannot delete your own account' : 'Delete user'}
           >
             Delete
