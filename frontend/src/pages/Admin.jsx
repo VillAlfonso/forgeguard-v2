@@ -120,7 +120,14 @@ export default function Admin() {
     }
   }
 
+  function findUser(userId) {
+    return users.find(u => u.id === userId);
+  }
+
   async function banUser(userId) {
+    const u = findUser(userId);
+    const label = u ? `${u.username} (${u.email})` : 'this user';
+    if (!window.confirm(`Ban ${label}?\n\nThey will not be able to sign in until you unban them. Their data and scans remain intact.`)) return;
     setBanningUserId(userId);
     setError('');
     try {
@@ -134,6 +141,9 @@ export default function Admin() {
   }
 
   async function unbanUser(userId) {
+    const u = findUser(userId);
+    const label = u ? `${u.username} (${u.email})` : 'this user';
+    if (!window.confirm(`Unban ${label}?\n\nThey will be able to sign in again immediately.`)) return;
     setBanningUserId(userId);
     setError('');
     try {
@@ -147,6 +157,9 @@ export default function Admin() {
   }
 
   async function promoteUser(userId) {
+    const u = findUser(userId);
+    const label = u ? `${u.username} (${u.email})` : 'this user';
+    if (!window.confirm(`Promote ${label} to ADMIN?\n\nThey will gain access to the Admin Panel and every permission the admin role grants.`)) return;
     setError('');
     try {
       await api.adminPromoteAdmin(userId);
@@ -157,6 +170,9 @@ export default function Admin() {
   }
 
   async function demoteUser(userId) {
+    const u = findUser(userId);
+    const label = u ? `${u.username} (${u.email})` : 'this user';
+    if (!window.confirm(`Demote ${label} back to a regular user?\n\nThey will lose access to the Admin Panel immediately.`)) return;
     setError('');
     try {
       await api.adminDemoteAdmin(userId);
@@ -334,8 +350,6 @@ export default function Admin() {
             </label>
             <div style={{ borderTop: '1px solid #112418', paddingTop: 12, fontSize: 12, color: '#86efac' }}>
               <div>ID: <span style={{ color: '#d8ffe6', fontFamily: 'monospace' }}>{editing.id}</span></div>
-              <div>Stripe customer: <span style={{ color: '#d8ffe6', fontFamily: 'monospace' }}>{editing.stripe_customer_id || '-'}</span></div>
-              <div>Stripe subscription: <span style={{ color: '#d8ffe6', fontFamily: 'monospace' }}>{editing.stripe_subscription_id || '-'}</span></div>
               <div>Scans this month: <span style={{ color: '#d8ffe6' }}>{editing.scans_this_month}</span></div>
               <div>Created: <span style={{ color: '#d8ffe6' }}>{editing.created_at}</span></div>
             </div>
@@ -347,17 +361,37 @@ export default function Admin() {
         </Modal>
       )}
 
-      {deleteId && (
-        <Modal onClose={() => setDeleteId(null)} title="Delete user?">
-          <p style={{ color: '#e5e5e5', fontSize: 14 }}>
-            This permanently deletes the user and all their scan history. This cannot be undone.
-          </p>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
-            <button className="btn" onClick={() => setDeleteId(null)}>Cancel</button>
-            <button className="btn btn-danger" onClick={confirmDelete}>Delete</button>
-          </div>
-        </Modal>
-      )}
+      {deleteId && (() => {
+        const target = users.find(u => u.id === deleteId);
+        return (
+          <Modal onClose={() => setDeleteId(null)} title="Delete user?">
+            <p style={{ color: '#e5e5e5', fontSize: 14, marginBottom: 12 }}>
+              You are about to permanently delete:
+            </p>
+            <div style={{
+              background: 'rgba(255,51,68,0.06)', border: '1px solid #7a1f28',
+              borderRadius: 4, padding: 12, marginBottom: 14,
+            }}>
+              <div style={{ fontSize: 14, color: '#d8ffe6', fontWeight: 600 }}>
+                {target?.full_name || target?.username || '—'}
+              </div>
+              <div className="mono" style={{ fontSize: 12, color: '#86efac', marginTop: 4 }}>
+                @{target?.username} · {target?.email}
+              </div>
+              <div className="mono" style={{ fontSize: 11, color: '#6dba85', marginTop: 4 }}>
+                {target?.scans_this_month ?? 0} scans this month
+              </div>
+            </div>
+            <p style={{ color: '#ff8a99', fontSize: 13, lineHeight: 1.6, margin: 0 }}>
+              This permanently deletes the user, their scan history, uploaded images, and any classroom memberships. This cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
+              <button className="btn" onClick={() => setDeleteId(null)}>Cancel</button>
+              <button className="btn btn-danger" onClick={confirmDelete}>Delete forever</button>
+            </div>
+          </Modal>
+        );
+      })()}
       </div>
       )}
 
